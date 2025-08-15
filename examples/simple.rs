@@ -1,6 +1,6 @@
 use bevy::{
     color::palettes::css::{SILVER, YELLOW},
-    core_pipeline::prepass::{DepthPrepass, NormalPrepass},
+    core_pipeline::prepass::DepthPrepass,
     input::keyboard::KeyboardInput,
     prelude::*,
 };
@@ -32,13 +32,12 @@ fn setup(
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(3.0, 2., 3.0).looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+        // Mark camera for outline rendering
         OutlineCamera,
-        NormalPrepass,
         DepthPrepass,
         Msaa::Off,
         Camera {
             hdr: true,
-            order: 0,
             ..default()
         },
     ));
@@ -64,7 +63,8 @@ fn setup(
         Mesh3d(meshes.add(Cuboid::default())),
         MeshMaterial3d(materials.add(Color::from(YELLOW))),
         Transform::from_xyz(0.0, 1.0, 0.0),
-        MeshOutline::new(5.0),
+        // Add outline
+        MeshOutline::new(10.0),
     ));
 }
 

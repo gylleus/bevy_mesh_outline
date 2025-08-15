@@ -80,7 +80,6 @@ impl SpecializedMeshPipeline for MeshOutlinePipeline {
             entry_point: "fragment".into(),
             targets: vec![Some(ColorTargetState {
                 format: TextureFormat::Rgba32Float,
-                // format: target.get_color_attachment().format,
                 blend: None, // No blending for now
                 write_mask: ColorWrites::ALL,
             })],

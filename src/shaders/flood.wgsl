@@ -66,7 +66,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
                 let depth_diff = candidate_depth - current_depth;
 
                 if (abs(fract(neighbor.b) - fract(candidate_seed.b)) > 0.001) {
-                    if (depth_diff > 0.0001) {
+                    if (depth_diff > 0.01) {
                         closest_dist = dist;
                         current_depth = candidate_depth;
                         candidate_seed = neighbor;

@@ -36,7 +36,8 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetOutlineBindGroup<I> {
             pass.set_bind_group(I, bind_group, &[]);
             RenderCommandResult::Success
         } else {
-            RenderCommandResult::Failure("Missing outline bind group")
+            RenderCommandResult::Success
+            // RenderCommandResult::Failure("Missing outline bind group")
         }
     }
 }

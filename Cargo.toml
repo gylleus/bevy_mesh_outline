@@ -16,3 +16,13 @@ nonmax = "0.5.5"
 [[example]]
 name = "simple"
 path = "examples/simple.rs"
+
+
+[[example]]
+name = "intersecting"
+path = "examples/intersecting.rs"
+
+
+[[example]]
+name = "animated_mesh"
+path = "examples/animated_mesh.rs"

@@ -144,6 +144,10 @@ impl MeshOutline {
             id: rng.random(),
         }
     }
+
+    pub fn with_highlight(self, highlight: f32) -> Self {
+        Self { highlight, ..self }
+    }
 }
 
 #[derive(Debug, Component, Reflect, Clone, PartialEq)]

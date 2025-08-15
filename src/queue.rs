@@ -41,7 +41,6 @@ pub fn queue_outline(
 
         // Create the key based on the view. In this case we only care about MSAA and HDR
         let view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
-            | MeshPipelineKey::NORMAL_PREPASS
             | MeshPipelineKey::DEPTH_PREPASS
             | MeshPipelineKey::from_hdr(view.hdr);
 

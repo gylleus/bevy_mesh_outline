@@ -163,7 +163,7 @@ impl ViewNode for OutlineMaskNode {
         let outline_width: f32 = flood_settings.width;
 
         let passes = if outline_width > 0.0 {
-            ((outline_width * 4.0).ceil() as u32 / 2 + 1)
+            ((outline_width * 2.0).ceil() as u32 / 2 + 1)
                 .next_power_of_two()
                 .trailing_zeros()
                 + 1

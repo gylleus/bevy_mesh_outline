@@ -62,7 +62,6 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     #else
         var vertex = vertex_no_morph;
     #endif
-    // vertex.instance_index = 1;
 
     #ifdef SKINNED
         var world_from_local = skinning::skin_model(vertex.joint_indices, vertex.joint_weights,
