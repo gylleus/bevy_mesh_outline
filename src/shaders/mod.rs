@@ -1,0 +1,11 @@
+use bevy::asset::{Handle, weak_handle};
+use bevy_render::render_resource::Shader;
+
+pub(crate) const MASK_SHADER_HANDLE: Handle<Shader> =
+    weak_handle!("4c41a7eb-b802-4e76-97f1-3327d80743dd");
+
+pub(crate) const FLOOD_SHADER_HANDLE: Handle<Shader> =
+    weak_handle!("a06a9919-18e3-4e91-a312-a1463bb6d719");
+
+pub(crate) const COMPOSE_SHADER_HANDLE: Handle<Shader> =
+    weak_handle!("6fe0f3ef-e31f-40e7-a20a-ed002ac4bb3f");
