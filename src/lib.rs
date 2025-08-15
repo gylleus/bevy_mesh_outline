@@ -40,6 +40,8 @@ use render::{OutlineBindGroups, SetOutlineBindGroup, prepare_outline_bind_groups
 use texture::prepare_flood_textures;
 use view::extract_outline_view_uniforms;
 
+use crate::shaders::load_shaders;
+
 pub(crate) type DrawOutline = (
     SetItemPipeline,
     SetMeshViewBindGroup<0>,
@@ -52,6 +54,8 @@ pub struct MeshOutlinePlugin;
 
 impl Plugin for MeshOutlinePlugin {
     fn build(&self, app: &mut App) {
+        load_shaders(app);
+
         app.add_plugins((
             ExtractComponentPlugin::<MeshOutline>::default(),
             ExtractComponentPlugin::<OutlineCamera>::default(),
@@ -128,7 +132,6 @@ pub struct OutlineCamera;
 pub struct MeshOutline {
     pub highlight: f32,
     pub width: f32,
-    pub scaled_width: f32,
     pub id: f32,
 }
 
@@ -138,7 +141,6 @@ impl MeshOutline {
         Self {
             highlight: 0.0,
             width,
-            scaled_width: width,
             id: rng.random(),
         }
     }
@@ -163,7 +165,7 @@ impl ExtractComponent for MeshOutline {
     ) -> Option<Self::Out> {
         Some(ExtractedOutline {
             highlight: outline.highlight,
-            width: outline.scaled_width,
+            width: outline.width,
             id: outline.id,
             world_from_local: Affine3::from(&transform.affine()).to_transpose(),
         })

@@ -47,16 +47,19 @@ pub fn queue_outline(
 
         for &(render_entity, main_entity) in visible_entities.get::<Mesh3d>().iter() {
             if !outlined_meshes.get(render_entity).is_ok() {
+                // tracing::warn!(target: "bevy_mesh_outline", "No outline found for entity {:?}", render_entity);
                 continue;
             }
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(main_entity)
             else {
+                tracing::warn!(target: "bevy_mesh_outline", "No mesh instance found for entity {:?}", main_entity);
                 continue;
             };
 
             let (vertex_slab, index_slab) = mesh_allocator.mesh_slabs(&mesh_instance.mesh_asset_id);
 
             let Some(mesh) = render_meshes.get(mesh_instance.mesh_asset_id) else {
+                tracing::warn!(target: "bevy_mesh_outline", "No mesh found for entity {:?}", main_entity);
                 continue;
             };
 

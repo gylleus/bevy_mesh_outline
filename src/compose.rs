@@ -16,7 +16,7 @@ use wgpu_types::{
     ShaderStages, TextureFormat, TextureSampleType,
 };
 
-const COMPOSE_SHADER_ASSET_PATH: &str = "shaders/mesh_outline/compose_output.wgsl";
+use crate::shaders::COMPOSE_SHADER_HANDLE;
 
 #[derive(Clone, Resource)]
 pub struct ComposeOutputPipeline {
@@ -43,8 +43,6 @@ impl FromWorld for ComposeOutputPipeline {
             ),
         );
 
-        let shader = world.load_asset(COMPOSE_SHADER_ASSET_PATH);
-
         let pipeline_id = world
             .resource_mut::<PipelineCache>()
             // This will add the pipeline to the cache and queue its creation
@@ -54,7 +52,7 @@ impl FromWorld for ComposeOutputPipeline {
                 // This will setup a fullscreen triangle for the vertex state
                 vertex: fullscreen_shader_vertex_state(),
                 fragment: Some(FragmentState {
-                    shader,
+                    shader: COMPOSE_SHADER_HANDLE,
                     shader_defs: vec![],
                     entry_point: "fragment".into(),
                     targets: vec![Some(ColorTargetState {

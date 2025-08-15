@@ -19,9 +19,9 @@ use wgpu_types::{
     SamplerBindingType, ShaderStages, TextureFormat, TextureSampleType,
 };
 
-use super::{ExtractedOutline, OutlineCamera};
+use crate::shaders::FLOOD_SHADER_HANDLE;
 
-const JUMP_FLOOD_SHADER_ASSET_PATH: &str = "shaders/mesh_outline/flood.wgsl";
+use super::{ExtractedOutline, OutlineCamera};
 
 #[derive(ShaderType)]
 pub struct JumpFloodUniform {
@@ -81,7 +81,6 @@ impl FromWorld for JumpFloodPipeline {
             min_filter: FilterMode::Nearest,
             ..Default::default()
         });
-        let shader = world.load_asset(JUMP_FLOOD_SHADER_ASSET_PATH);
 
         let pipeline_id =
             world
@@ -91,7 +90,7 @@ impl FromWorld for JumpFloodPipeline {
                     layout: vec![layout.clone()],
                     vertex: fullscreen_shader_vertex_state(),
                     fragment: Some(FragmentState {
-                        shader,
+                        shader: FLOOD_SHADER_HANDLE,
                         shader_defs: vec![],
                         entry_point: "fragment".into(),
                         targets: vec![Some(ColorTargetState {

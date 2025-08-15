@@ -1,5 +1,5 @@
 [package]
-name = "bevy-mesh-outline"
+name = "bevy_mesh_outline"
 version = "0.1.0"
 edition = "2024"
 
@@ -11,3 +11,8 @@ tracing = "0.1.41"
 wgpu-types = "24.0.0"
 bytemuck = "1.19.0"
 nonmax = "0.5.5"
+
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"

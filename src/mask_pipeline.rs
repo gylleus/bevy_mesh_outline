@@ -25,17 +25,15 @@ use bevy_render::{
 };
 use nonmax::NonMaxU32;
 
-use super::{ExtractedOutline, ExtractedOutlines, uniforms::OutlineUniform};
+use crate::shaders::MASK_SHADER_HANDLE;
 
-const MASK_SHADER_PATH: &str = "shaders/mesh_outline/mask.wgsl";
+use super::{ExtractedOutline, ExtractedOutlines, uniforms::OutlineUniform};
 
 #[derive(Resource)]
 pub struct MeshOutlinePipeline {
     pub mesh_pipeline: MeshPipeline,
 
     pub outline_bind_group_layout: BindGroupLayout,
-    // pub instance_batch_size: Option<u32>,
-    pub mask_shader_handle: Handle<Shader>,
 }
 
 impl FromWorld for MeshOutlinePipeline {
@@ -53,9 +51,6 @@ impl FromWorld for MeshOutlinePipeline {
             ),
         );
 
-        let mask_shader_handle: Handle<Shader> =
-            world.resource::<AssetServer>().load(MASK_SHADER_PATH);
-
         let mesh_pipeline = MeshPipeline::from_world(world);
         // mesh_pipeline.skins_use_uniform_buffers = true;
 
@@ -63,7 +58,6 @@ impl FromWorld for MeshOutlinePipeline {
             mesh_pipeline,
             // instance_batch_size,
             outline_bind_group_layout: outline_instance_bind_group_layout,
-            mask_shader_handle,
         }
     }
 }
@@ -76,14 +70,12 @@ impl SpecializedMeshPipeline for MeshOutlinePipeline {
         key: Self::Key,
         layout: &MeshVertexBufferLayoutRef,
     ) -> Result<RenderPipelineDescriptor, SpecializedMeshPipelineError> {
-        tracing::info!("Specializing outline pipeline for {:?}", key);
-
         let mut descriptor = self.mesh_pipeline.specialize(key, layout)?;
-        descriptor.vertex.shader = self.mask_shader_handle.clone();
-        descriptor.fragment.as_mut().unwrap().shader = self.mask_shader_handle.clone();
+        descriptor.vertex.shader = MASK_SHADER_HANDLE;
+        descriptor.fragment.as_mut().unwrap().shader = MASK_SHADER_HANDLE;
 
         descriptor.fragment = Some(FragmentState {
-            shader: self.mask_shader_handle.clone(),
+            shader: MASK_SHADER_HANDLE,
             shader_defs: vec![],
             entry_point: "fragment".into(),
             targets: vec![Some(ColorTargetState {
@@ -244,7 +236,6 @@ impl GetFullBatchData for MeshOutlinePipeline {
         phase_indirect_parameters_buffers: &mut UntypedPhaseIndirectParametersBuffers,
         indirect_parameters_offset: u32,
     ) {
-        tracing::info!("write_batch_indirect_parameters_metadata for outline pipeline");
         let indirect_parameters = IndirectParametersCpuMetadata {
             base_output_index,
             batch_set_index: match batch_set_index {
