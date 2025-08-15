@@ -145,7 +145,7 @@ impl MeshOutline {
             width,
             id: rng.random(),
             priority: 0.0,
-            color: Color::srgb(1.0, 1.0, 0.0), // Default yellow outline
+            color: Color::BLACK,
         }
     }
 

@@ -79,8 +79,6 @@ impl ViewNode for OutlineMaskNode {
             return Ok(());
         };
 
-        // let color_attachments = [Some(target.get_color_attachment())];
-
         render_context.command_encoder().clear_texture(
             &flood_textures.input.texture,
             &ImageSubresourceRange::default(),
@@ -209,7 +207,6 @@ impl ViewNode for OutlineMaskNode {
         let bind_group = render_context.render_device().create_bind_group(
             "compose_output_bind_group",
             &compose_pipeline.layout,
-            // It's important for this to match the BindGroupLayout defined in the PostProcessPipeline
             &BindGroupEntries::sequential((
                 // binding 0: screen_texture - The original scene color
                 post_process.source,
@@ -217,7 +214,7 @@ impl ViewNode for OutlineMaskNode {
                 &jump_flood_pass.pipeline.sampler,
                 // binding 2: flood_texture - The flood output texture
                 &flood_textures.output.default_view,
-                // binding 3: appearance_texture - The appearance data texture  
+                // binding 3: appearance_texture - The appearance data texture
                 &flood_textures.appearance_texture.default_view,
                 // binding 4: depth_texture - Global depth texture
                 &global_depth.texture.default_view,
