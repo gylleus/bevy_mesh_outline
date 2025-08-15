@@ -51,8 +51,6 @@ impl ViewNode for OutlineMaskNode {
         if let Some(target_size) = camera.physical_target_size {
             let current_size = flood_textures.input.texture.size();
             if current_size.width != target_size.x || current_size.height != target_size.y {
-                // Trigger texture recreation
-                // commands.entity(view).remove::<FloodTextures>();
                 tracing::warn!("Texture size mismatch, recreating flood textures");
             }
         }
@@ -72,10 +70,12 @@ impl ViewNode for OutlineMaskNode {
         };
 
         let Some(mut jump_flood_pass) = JumpFloodPass::new(world) else {
+            tracing::warn!("No jump flood pass found in the world");
             return Ok(());
         };
         let mut flood_textures = flood_textures.clone();
         let Some(global_depth) = prepass_textures.depth.as_ref() else {
+            tracing::warn!("No global depth texture found");
             return Ok(());
         };
 
@@ -93,13 +93,17 @@ impl ViewNode for OutlineMaskNode {
             &flood_textures.outline_color_storage.texture,
             &ImageSubresourceRange::default(),
         );
+        render_context.command_encoder().clear_texture(
+            &flood_textures.appearance_texture.texture,
+            &ImageSubresourceRange::default(),
+        );
 
         render_context.command_encoder().clear_texture(
             &flood_textures.outline_depth_texture,
             &ImageSubresourceRange::default(),
         );
 
-        let color_attachment = RenderPassColorAttachment {
+        let flood_color_attachment = RenderPassColorAttachment {
             view: &flood_textures.output.default_view,
             resolve_target: None,
             ops: Operations {
@@ -113,6 +117,20 @@ impl ViewNode for OutlineMaskNode {
             },
         };
 
+        let appearance_color_attachment = RenderPassColorAttachment {
+            view: &flood_textures.appearance_texture.default_view,
+            resolve_target: None,
+            ops: Operations {
+                load: LoadOp::Clear(wgpu_types::Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                }),
+                store: StoreOp::Store,
+            },
+        };
+
         let outline_depth_view = flood_textures
             .outline_depth_texture
             .create_view(&TextureViewDescriptor::default());
@@ -120,7 +138,10 @@ impl ViewNode for OutlineMaskNode {
         {
             let mut init_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
                 label: Some("outline_flood_init"),
-                color_attachments: &[Some(color_attachment)],
+                color_attachments: &[
+                    Some(flood_color_attachment),
+                    Some(appearance_color_attachment),
+                ],
                 // depth_stencil_attachment: depth_stencil_attachment,
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
                     view: &outline_depth_view,
@@ -153,6 +174,7 @@ impl ViewNode for OutlineMaskNode {
         // Get the pipeline from the cache
         let Some(pipeline) = pipeline_cache.get_render_pipeline(compose_pipeline.pipeline_id)
         else {
+            tracing::warn!("No compose pipeline found in the cache");
             return Ok(());
         };
 
@@ -179,6 +201,7 @@ impl ViewNode for OutlineMaskNode {
                 flood_textures.output(),
                 &outline_depth_view,
                 &flood_textures.outline_color_storage.default_view,
+                &flood_textures.appearance_texture.default_view,
                 size,
             );
         }
@@ -188,17 +211,17 @@ impl ViewNode for OutlineMaskNode {
             &compose_pipeline.layout,
             // It's important for this to match the BindGroupLayout defined in the PostProcessPipeline
             &BindGroupEntries::sequential((
-                // The original scene color
+                // binding 0: screen_texture - The original scene color
                 post_process.source,
-                // Use the sampler created for the pipeline
+                // binding 1: texture_sampler - Use the sampler created for the pipeline
                 &jump_flood_pass.pipeline.sampler,
-                // The outline colors
-                &flood_textures.outline_color_storage.default_view,
-                // Make sure to use the source view
+                // binding 2: flood_texture - The flood output texture
                 &flood_textures.output.default_view,
-                // Global depth texture
+                // binding 3: appearance_texture - The appearance data texture  
+                &flood_textures.appearance_texture.default_view,
+                // binding 4: depth_texture - Global depth texture
                 &global_depth.texture.default_view,
-                // Use the outline depth texture
+                // binding 5: outline_depth_texture - Use the outline depth texture
                 &outline_depth_view,
             )),
         );

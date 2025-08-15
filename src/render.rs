@@ -36,8 +36,9 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetOutlineBindGroup<I> {
             pass.set_bind_group(I, bind_group, &[]);
             RenderCommandResult::Success
         } else {
-            RenderCommandResult::Success
-            // RenderCommandResult::Failure("Missing outline bind group")
+            // Bind group not ready yet, skip this frame
+            tracing::warn!("No outline bind group found for entity {:?}", item.main_entity());
+            RenderCommandResult::Skip
         }
     }
 }
@@ -59,6 +60,8 @@ pub fn prepare_outline_bind_groups(
             highlight: outline.highlight,
             width: outline.width,
             id: outline.id,
+            priority: outline.priority,
+            outline_color: outline.color,
             instance_index: 0,
             world_from_local: outline.world_from_local,
         };

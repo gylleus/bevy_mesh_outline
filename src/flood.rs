@@ -68,11 +68,12 @@ impl FromWorld for JumpFloodPipeline {
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::FRAGMENT,
                 (
-                    texture_2d(TextureSampleType::Float { filterable: true }),
-                    sampler(SamplerBindingType::Filtering),
-                    uniform_buffer::<JumpFloodUniform>(true),
-                    texture_depth_2d(),
-                    texture_2d(TextureSampleType::Float { filterable: true }),
+                    texture_2d(TextureSampleType::Float { filterable: true }), // flood_texture
+                    sampler(SamplerBindingType::Filtering),                    // texture_sampler
+                    uniform_buffer::<JumpFloodUniform>(true),                  // instance
+                    texture_depth_2d(),                                        // depth_texture
+                    texture_2d(TextureSampleType::Float { filterable: true }), // color_texture
+                    texture_2d(TextureSampleType::Float { filterable: true }), // appearance_texture
                 ),
             ),
         );
@@ -151,6 +152,7 @@ impl<'w> JumpFloodPass<'w> {
         output: &CachedTexture,
         depth_texture: &TextureView,
         color_texture: &TextureView,
+        appearance_texture: &TextureView,
         size: u32,
     ) {
         let bind_group = render_context.render_device().create_bind_group(
@@ -162,6 +164,7 @@ impl<'w> JumpFloodPass<'w> {
                 self.pipeline.lookup_buffer.binding().unwrap(),
                 depth_texture,
                 color_texture,
+                appearance_texture,
             )),
         );
 

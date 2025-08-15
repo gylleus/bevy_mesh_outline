@@ -1,7 +1,8 @@
+use std::f32::consts::PI;
+
 use bevy::{
-    color::palettes::css::{BLUE, SILVER, YELLOW},
+    color::palettes::css::{BLUE, GREEN, RED, SILVER, YELLOW},
     core_pipeline::prepass::DepthPrepass,
-    input::keyboard::KeyboardInput,
     prelude::*,
 };
 use bevy_mesh_outline::{MeshOutline, MeshOutlinePlugin, OutlineCamera};
@@ -57,27 +58,37 @@ fn setup(
         MeshMaterial3d(materials.add(Color::from(SILVER))),
     ));
 
-    // commands.spawn((
-    //     Mesh3d(meshes.add(Cuboid::default())),
-    //     MeshMaterial3d(materials.add(Color::from(YELLOW))),
-    //     Transform::from_xyz(0.0, 1.0, 0.0),
-    //     Rotation {
-    //         velocity: vec3(0.5, 1.0, 0.0),
-    //     },
-    //     // Add outline
-    //     MeshOutline::new(10.0),
-    // ));
-
+    // Yellow cube with red outline, low priority
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::default())),
-        MeshMaterial3d(materials.add(Color::from(BLUE))),
-        Transform::from_xyz(-0.4, 1.0, 0.4),
-        Rotation {
-            velocity: vec3(0.1, 1.0, 0.0),
-        },
-        // Add outline
-        MeshOutline::new(10.0).with_highlight(10.0),
+        MeshMaterial3d(materials.add(Color::from(YELLOW))),
+        Transform::from_xyz(0.0, 1.0, 0.0)
+            .with_rotation(Quat::from_rotation_x(PI / 4.0) * Quat::from_rotation_y(PI / 3.0)),
+        MeshOutline::new(10.0)
+            .with_color(Color::from(RED))
+            .with_priority(1.0),
     ));
+
+    // Blue sphere with green outline, high priority
+    commands.spawn((
+        Mesh3d(meshes.add(Sphere::default())),
+        MeshMaterial3d(materials.add(Color::from(BLUE))),
+        Transform::from_xyz(-0.5, 1.0, 0.5),
+        MeshOutline::new(10.0)
+            .with_color(Color::from(GREEN))
+            .with_priority(5.0)
+            .with_highlight(10.0),
+    ));
+
+    // Another cube with blue outline, medium priority, overlapping the sphere
+    // commands.spawn((
+    //     Mesh3d(meshes.add(Cuboid::default())),
+    //     MeshMaterial3d(materials.add(Color::from(GREEN))),
+    //     Transform::from_xyz(-0.3, 1.2, 0.3).with_scale(Vec3::splat(0.8)),
+    //     MeshOutline::new(15.0)
+    //         .with_color(Color::from(BLUE))
+    //         .with_priority(3.0),
+    // ));
 }
 
 fn rotate(mut query: Query<(&mut Transform, &Rotation)>, time: Res<Time>) {
@@ -85,9 +96,6 @@ fn rotate(mut query: Query<(&mut Transform, &Rotation)>, time: Res<Time>) {
         let rotation = Quat::from_rotation_y(rotation.velocity.y * time.delta_secs())
             * Quat::from_rotation_x(rotation.velocity.x * time.delta_secs())
             * Quat::from_rotation_z(rotation.velocity.z * time.delta_secs());
-
-        // let rotation = Quat::from_rotation_y(time.delta_secs() / 2.)
-        //     * Quat::from_rotation_x(time.delta_secs());
 
         transform.rotation *= rotation;
     }

@@ -80,6 +80,8 @@ pub fn queue_outline(
             let next_change_tick = change_tick.get() + 1;
             change_tick.set(next_change_tick);
 
+            // tracing::info!("Queuing outline for entity {:?}", main_entity);
+
             mask_phase.add(
                 OutlineBatchSetKey {
                     pipeline: pipeline_id,

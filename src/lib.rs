@@ -133,6 +133,8 @@ pub struct MeshOutline {
     pub highlight: f32,
     pub width: f32,
     pub id: f32,
+    pub priority: f32,
+    pub color: Color,
 }
 
 impl MeshOutline {
@@ -142,11 +144,21 @@ impl MeshOutline {
             highlight: 0.0,
             width,
             id: rng.random(),
+            priority: 0.0,
+            color: Color::srgb(1.0, 1.0, 0.0), // Default yellow outline
         }
     }
 
     pub fn with_highlight(self, highlight: f32) -> Self {
         Self { highlight, ..self }
+    }
+
+    pub fn with_priority(self, priority: f32) -> Self {
+        Self { priority, ..self }
+    }
+
+    pub fn with_color(self, color: Color) -> Self {
+        Self { color, ..self }
     }
 }
 
@@ -155,6 +167,8 @@ pub struct ExtractedOutline {
     pub highlight: f32,
     pub width: f32,
     pub id: f32,
+    pub priority: f32,
+    pub color: Vec3,
     pub world_from_local: [Vec4; 3],
 }
 
@@ -167,10 +181,13 @@ impl ExtractComponent for MeshOutline {
     fn extract_component(
         (_entity, outline, transform): bevy::ecs::query::QueryItem<'_, Self::QueryData>,
     ) -> Option<Self::Out> {
+        let linear_color: LinearRgba = outline.color.into();
         Some(ExtractedOutline {
             highlight: outline.highlight,
             width: outline.width,
             id: outline.id,
+            priority: outline.priority,
+            color: Vec3::new(linear_color.red, linear_color.green, linear_color.blue),
             world_from_local: Affine3::from(&transform.affine()).to_transpose(),
         })
     }

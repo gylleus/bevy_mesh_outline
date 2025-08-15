@@ -78,11 +78,20 @@ impl SpecializedMeshPipeline for MeshOutlinePipeline {
             shader: MASK_SHADER_HANDLE,
             shader_defs: vec![],
             entry_point: "fragment".into(),
-            targets: vec![Some(ColorTargetState {
-                format: TextureFormat::Rgba32Float,
-                blend: None, // No blending for now
-                write_mask: ColorWrites::ALL,
-            })],
+            targets: vec![
+                // RT0: flood data (uv.xy, width, depth)
+                Some(ColorTargetState {
+                    format: TextureFormat::Rgba32Float,
+                    blend: None,
+                    write_mask: ColorWrites::ALL,
+                }),
+                // RT1: appearance data (color.rgb, priority)
+                Some(ColorTargetState {
+                    format: TextureFormat::Rgba32Float,
+                    blend: None,
+                    write_mask: ColorWrites::ALL,
+                }),
+            ],
         });
 
         descriptor.depth_stencil = Some(DepthStencilState {

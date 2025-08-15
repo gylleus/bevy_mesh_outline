@@ -16,6 +16,7 @@ pub struct FloodTextures {
     pub output: CachedTexture,
     pub outline_depth_texture: Texture,
     pub outline_color_storage: CachedTexture,
+    pub appearance_texture: CachedTexture,
 }
 
 impl FloodTextures {
@@ -87,10 +88,12 @@ pub fn prepare_flood_textures(
         commands.entity(entity).insert(FloodTextures {
             flip: false,
             input: texture_cache.get(&render_device, texture_descriptor.clone()),
-            output: texture_cache.get(&render_device, texture_descriptor),
+            output: texture_cache.get(&render_device, texture_descriptor.clone()),
             outline_depth_texture: depth_texture,
             outline_color_storage: texture_cache
                 .get(&render_device, color_storage_texture_descriptor),
+            appearance_texture: texture_cache
+                .get(&render_device, texture_descriptor),
         });
         texture_cache.update();
     }

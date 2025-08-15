@@ -5,8 +5,8 @@
 
 @group(0) @binding(0) var screen_texture: texture_2d<f32>;
 @group(0) @binding(1) var texture_sampler: sampler;
-@group(0) @binding(2) var outline_texture: texture_2d<f32>;
-@group(0) @binding(3) var flood_texture: texture_2d<f32>;
+@group(0) @binding(2) var flood_texture: texture_2d<f32>;
+@group(0) @binding(3) var appearance_texture: texture_2d<f32>;
 @group(0) @binding(4) var depth_texture: texture_depth_2d;
 @group(0) @binding(5) var outline_depth_texture: texture_depth_2d;
 
@@ -18,28 +18,38 @@ struct VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(screen_texture, texture_sampler, in.uv);
-    let outline_vals = textureSample(flood_texture, texture_sampler, in.uv);
-    var uv = outline_vals.xy;
+    let flood_data = textureSample(flood_texture, texture_sampler, in.uv);
+    let seed_uv = flood_data.xy;
 
-    if uv.x <= 0 || uv.y <= 0 {
+    // Early return if no outline data
+    if seed_uv.x <= 0.0 || seed_uv.y <= 0.0 {
         return color;
     }
 
-    let depth = textureSample(depth_texture, texture_sampler, in.uv);
-    let outline_depth = textureSample(outline_depth_texture, texture_sampler, uv);
+    // Get depths
+    let current_depth = textureSample(depth_texture, texture_sampler, in.uv);
+    let outline_depth = textureSample(outline_depth_texture, texture_sampler, seed_uv);
 
-    let highlight_strength = outline_vals.a;
-
-    if outline_depth > depth {
-        if highlight_strength > 20.0 {
-            color = vec4<f32>(1.0, 0.0, 0.0, 1.0) * (highlight_strength - 20.0);
-        } else if highlight_strength > 10.0 {
-            let c = 0.5;
-            color = vec4<f32>(c,c,c, 1.0) * (highlight_strength - 10.0);
-        } else {
-            color = vec4<f32>(1.0, 1.0, 0.0, 1.0) * (highlight_strength);
-        }
+    // Get appearance data for this outline
+    let appearance = textureSample(appearance_texture, texture_sampler, seed_uv);
+    let outline_color = appearance.rgb;
+    let priority_and_mesh_id = appearance.w;
+    
+    // Extract mesh ID for highlighting (fractional part)
+    let mesh_id = fract(priority_and_mesh_id);
+    
+    // Only render outline when it's behind the current geometry
+    if outline_depth > current_depth {
+        // Calculate outline intensity based on distance (optional)
+        let distance_to_seed = distance(in.uv, seed_uv);
+        let outline_width = flood_data.z;
+        let intensity = 1.0 - (distance_to_seed * 100.0) / outline_width; // Fade towards edges
+        
+        // Apply outline color with intensity
+        color = vec4<f32>(outline_color * max(intensity, 0.3), 1.0);
     }
-
+    
+    // return flood_data;
+    // return vec4<f32>(1.0);
     return color;
 }

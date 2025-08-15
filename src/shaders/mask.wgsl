@@ -11,19 +11,25 @@ struct Instance {
         highlight: f32,
         width: f32,
         id: f32,
+        priority: f32,
+        outline_color: vec3<f32>,
         instance_index: u32,
         world_from_local: mat3x4<f32>,
     };
 
 struct VertexOutput {
         @builtin(position) position: vec4<f32>,
-        @location(0) highlight: f32,
-        @location(1) world_position: vec4<f32>,
-        @location(2) normal: vec3<f32>,
-        @location(3) mesh_id: f32,
-        @location(4) outline_width: f32,
-        @location(5) instance_index: u32,
+        @location(0) world_position: vec4<f32>,
+        @location(1) mesh_id: f32,
+        @location(2) outline_width: f32,
+        @location(3) priority: f32,
+        @location(4) outline_color: vec3<f32>,
     };
+
+struct FragmentOutput {
+    @location(0) flood_data: vec4<f32>,
+    @location(1) appearance_data: vec4<f32>,
+}
 
 @group(2) @binding(0) var<uniform> outline_instance: Instance;
 
@@ -77,19 +83,23 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     #endif
 
     out.outline_width = outline_instance.width;
-    out.highlight = outline_instance.highlight;
     out.mesh_id = outline_instance.id;
-
-    let mesh = mesh[vertex_no_morph.instance_index];
-
-    out.instance_index = vertex_no_morph.instance_index;
+    out.priority = outline_instance.priority;
+    out.outline_color = outline_instance.outline_color;
 
     return out;
 }
 
 @fragment
-fn fragment(vertex: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(vertex: VertexOutput) -> FragmentOutput {
     let uv = frag_coord_to_uv(vertex.position.xy);
-
-    return vec4<f32>(uv, vertex.outline_width + vertex.mesh_id, vertex.highlight);
+    let depth = vertex.position.z;
+    
+    var output: FragmentOutput;
+    // RT0: seed_uv.xy, outline_width, depth
+    output.flood_data = vec4<f32>(uv, vertex.outline_width, depth);
+    // RT1: outline_color.rgb, priority + mesh_id
+    output.appearance_data = vec4<f32>(vertex.outline_color, vertex.priority + vertex.mesh_id);
+    
+    return output;
 }

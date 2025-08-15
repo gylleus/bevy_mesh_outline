@@ -10,30 +10,34 @@ struct JumpFloodUniform {
 @group(0) @binding(2) var<uniform> instance: JumpFloodUniform;
 @group(0) @binding(3) var depth_texture: texture_depth_2d;
 @group(0) @binding(4) var color_texture: texture_2d<f32>;
+@group(0) @binding(5) var appearance_texture: texture_2d<f32>;
+
+fn calculate_priority(candidate_depth: f32, current_depth: f32, mesh_priority: f32, distance: f32) -> f32 {
+    // Priority calculation: closer depth + higher mesh priority + shorter distance wins
+    let depth_factor = (1.0 - candidate_depth) * 10.0;  // Closer is better
+    let distance_factor = (100.0 - distance) * 0.1;     // Shorter distance is better
+    return depth_factor + mesh_priority + distance_factor;
+}
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let dims = vec2<f32>(textureDimensions(flood_texture));
-    
-    let aspect_ratio = min(dims.x / dims.y, 2.0);
     let step = i32(instance.step_length);
 
     let current = textureSample(flood_texture, texture_sampler, in.uv);
-
-    var candidate_seed = current;
-    var closest_dist = 999999.0;
-    var current_depth = 0.0;
+    var best_candidate = current;
+    var best_priority = -999999.0;
     
-    let current_screen = in.uv;
-    
+    // If current pixel has valid seed data, calculate its priority
     if (current.x >= 0.0) {
-        let current_pos_screen = current.xy * vec2<f32>(1.0, aspect_ratio);
-        closest_dist = distance(current_screen, current_pos_screen);
-        current_depth = textureSample(depth_texture, texture_sampler, current.xy);
-    } else {
-        textureSample(depth_texture, texture_sampler, in.uv);
+        let current_depth = current.w;
+        let current_appearance = textureSample(appearance_texture, texture_sampler, current.xy);
+        let current_mesh_priority = floor(current_appearance.w);  // Extract priority from packed data
+        let current_dist = distance(in.uv * dims, current.xy * dims);
+        best_priority = calculate_priority(current_depth, current_depth, current_mesh_priority, current_dist);
     }
 
+    // Check all 8 neighbors
     for (var dy = -1; dy <= 1; dy++) {
         for (var dx = -1; dx <= 1; dx++) {
             if (dx == 0 && dy == 0) {
@@ -42,43 +46,39 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
             
             let offset = vec2<f32>(f32(dx * step), f32(dy * step)) / dims;
             let neighbor_uv = in.uv + offset;
-
             let neighbor = textureSample(flood_texture, texture_sampler, neighbor_uv);
             
-            // Convert width from pixels to UV space, accounting for aspect ratio
-            let width_pixels = floor(neighbor.b);
-            let max_dist = width_pixels;  // Convert to UV space
-
-            let candidate_pos = neighbor.xy;
+            // Skip invalid neighbors
             if (neighbor.x < 0.0) {
                 continue;
             }
 
-            // Calculate distance in aspect-ratio-corrected space
-            let neighbor_screen = candidate_pos * dims;
-            let dist = distance(current_screen * dims, neighbor_screen);
+            let seed_pos = neighbor.xy;
+            let outline_width = neighbor.z;
+            let seed_depth = neighbor.w;
             
-            // Scale max_dist by aspect ratio for vertical dimension
-            let adjusted_max_dist = max_dist;
+            // Calculate distance from current pixel to seed
+            let dist = distance(in.uv * dims, seed_pos * dims);
+            
+            // Only consider pixels within outline range
+            if (dist >= outline_width) {
+                continue;
+            }
 
-            if (dist < adjusted_max_dist) {
-                let candidate_depth = textureSample(depth_texture, texture_sampler, candidate_pos);
-                let depth_diff = candidate_depth - current_depth;
-
-                if (abs(fract(neighbor.b) - fract(candidate_seed.b)) > 0.001) {
-                    if (depth_diff > 0.01) {
-                        closest_dist = dist;
-                        current_depth = candidate_depth;
-                        candidate_seed = neighbor;
-                    }
-                } else if (dist < closest_dist) {
-                    closest_dist = dist;
-                    current_depth = candidate_depth;
-                    candidate_seed = neighbor;
-                }
-            }       
+            // Get appearance data for this seed
+            let appearance = textureSample(appearance_texture, texture_sampler, seed_pos);
+            let mesh_priority = floor(appearance.w);
+            
+            // Calculate priority for this candidate
+            let candidate_priority = calculate_priority(seed_depth, seed_depth, mesh_priority, dist);
+            
+            // Update best candidate if this one has higher priority
+            if (candidate_priority > best_priority) {
+                best_candidate = neighbor;
+                best_priority = candidate_priority;
+            }
         }
     }
 
-    return candidate_seed;
+    return best_candidate;
 }
