@@ -1,7 +1,6 @@
 use bevy::{
-    color::palettes::css::{BLUE, RED, SILVER, YELLOW},
+    color::palettes::css::{BLUE, RED, SILVER},
     core_pipeline::{bloom::Bloom, prepass::DepthPrepass},
-    input::keyboard::KeyboardInput,
     prelude::*,
 };
 use bevy_mesh_outline::{MeshOutline, MeshOutlinePlugin, OutlineCamera};
