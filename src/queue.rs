@@ -16,14 +16,15 @@ use crate::{
     mask::{OutlineBatchSetKey, OutlineBinKey},
 };
 
-use super::{ExtractedOutline, MeshOutline3d, OutlineCamera, mask_pipeline::MeshOutlinePipeline};
+use super::{ExtractedOutline, MeshOutline3d, OutlineCamera, mask_pipeline::MeshMaskPipeline};
 
+#[allow(clippy::too_many_arguments)]
 pub fn queue_outline(
     outlined_meshes: Query<&ExtractedOutline>,
     draw_functions: Res<DrawFunctions<MeshOutline3d>>,
-    mut mask_phases: ResMut<ViewBinnedRenderPhases<MeshOutline3d>>,
-    mesh_outline_pipeline: Res<MeshOutlinePipeline>,
-    mut mesh_outline_pipelines: ResMut<SpecializedMeshPipelines<MeshOutlinePipeline>>,
+    mut outline_phases: ResMut<ViewBinnedRenderPhases<MeshOutline3d>>,
+    mesh_outline_pipeline: Res<MeshMaskPipeline>,
+    mut mesh_outline_pipelines: ResMut<SpecializedMeshPipelines<MeshMaskPipeline>>,
     pipeline_cache: Res<PipelineCache>,
     mesh_allocator: Res<MeshAllocator>,
     render_meshes: Res<RenderAssets<RenderMesh>>,
@@ -31,21 +32,19 @@ pub fn queue_outline(
     views: Query<(Entity, &ExtractedView, &RenderVisibleEntities, &Msaa), With<OutlineCamera>>,
     mut change_tick: Local<Tick>,
 ) {
-    // Get the id for our custom draw function
     let draw_function = draw_functions.read().id::<DrawOutline>();
 
     for (_view_entity, view, visible_entities, msaa) in views.iter() {
-        let Some(mask_phase) = mask_phases.get_mut(&view.retained_view_entity) else {
+        let Some(outline_phase) = outline_phases.get_mut(&view.retained_view_entity) else {
             continue;
         };
 
-        let view_key =
-            MeshPipelineKey::from_msaa_samples(msaa.samples()) | MeshPipelineKey::DEPTH_PREPASS;
-        // | MeshPipelineKey::from_hdr(view.hdr);
+        let view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
+            | MeshPipelineKey::DEPTH_PREPASS
+            | MeshPipelineKey::from_hdr(view.hdr);
 
         for &(render_entity, main_entity) in visible_entities.get::<Mesh3d>().iter() {
-            if !outlined_meshes.get(render_entity).is_ok() {
-                // tracing::warn!(target: "bevy_mesh_outline", "No outline found for entity {:?}", render_entity);
+            if outlined_meshes.get(render_entity).is_err() {
                 continue;
             }
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(main_entity)
@@ -81,7 +80,7 @@ pub fn queue_outline(
 
             // tracing::info!("Queuing outline for entity {:?}", main_entity);
 
-            mask_phase.add(
+            outline_phase.add(
                 OutlineBatchSetKey {
                     pipeline: pipeline_id,
                     draw_function,

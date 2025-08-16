@@ -14,7 +14,7 @@ use bevy_render::{
 };
 use wgpu_types::BufferUsages;
 
-use super::{ExtractedOutlines, mask_pipeline::MeshOutlinePipeline, uniforms::OutlineUniform};
+use super::{ExtractedOutlines, mask_pipeline::MeshMaskPipeline, uniforms::OutlineUniform};
 
 pub(crate) struct SetOutlineBindGroup<const I: usize>();
 
@@ -47,23 +47,14 @@ pub struct OutlineBindGroups(HashMap<MainEntity, BindGroup>);
 
 pub fn prepare_outline_bind_groups(
     render_device: Res<RenderDevice>,
-    outline_pipeline: Res<MeshOutlinePipeline>,
+    outline_pipeline: Res<MeshMaskPipeline>,
     extracted_outlines: Res<ExtractedOutlines>,
     mut outline_bind_groups: ResMut<OutlineBindGroups>,
 ) {
     outline_bind_groups.0.clear();
 
     for (entity, outline) in extracted_outlines.0.iter() {
-        // Create uniform
-        let outline_uniform = OutlineUniform {
-            intensity: outline.intensity,
-            width: outline.width,
-            id: outline.id,
-            priority: outline.priority,
-            outline_color: outline.color,
-            instance_index: 0,
-            world_from_local: outline.world_from_local,
-        };
+        let outline_uniform = OutlineUniform::from(outline);
 
         // Create buffer
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
@@ -82,6 +73,6 @@ pub fn prepare_outline_bind_groups(
             }],
         );
 
-        outline_bind_groups.0.insert(entity.clone(), bind_group);
+        outline_bind_groups.0.insert(*entity, bind_group);
     }
 }

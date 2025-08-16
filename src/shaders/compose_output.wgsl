@@ -2,7 +2,6 @@
     view_transformations::{ndc_to_uv},
 }
 
-
 @group(0) @binding(0) var screen_texture: texture_2d<f32>;
 @group(0) @binding(1) var texture_sampler: sampler;
 @group(0) @binding(2) var flood_texture: texture_2d<f32>;
@@ -33,7 +32,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     // Get appearance data for this outline
     let appearance = textureSample(appearance_texture, texture_sampler, seed_uv);
     let outline_color = appearance.rgb;
-    let priority_and_mesh_id = appearance.w;
     
     // Only render outline when it's behind the current geometry
     if outline_depth > current_depth {
@@ -46,7 +44,5 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         color = vec4<f32>(outline_color * max(intensity, 0.3), 1.0);
     }
     
-    // return flood_data;
-    // return vec4<f32>(1.0);
     return color;
 }

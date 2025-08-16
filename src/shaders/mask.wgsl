@@ -1,30 +1,28 @@
-    #import bevy_pbr::{
-        mesh_bindings::mesh,
-        mesh_functions,
-        skinning,
-        morph::morph,
-        forward_io::{Vertex},
-        view_transformations::{position_world_to_clip, ndc_to_uv, position_world_to_ndc,frag_coord_to_uv},
-    }
+#import bevy_pbr::{
+    mesh_bindings::mesh,
+    mesh_functions,
+    skinning,
+    morph::morph,
+    forward_io::{Vertex},
+    view_transformations::{position_world_to_clip, ndc_to_uv, position_world_to_ndc,frag_coord_to_uv},
+}
 
 struct Instance {
-        intensity: f32,
-        width: f32,
-        id: f32,
-        priority: f32,
-        outline_color: vec3<f32>,
-        instance_index: u32,
-        world_from_local: mat3x4<f32>,
-    };
+    intensity: f32,
+    width: f32,
+    id: f32,
+    priority: f32,
+    outline_color: vec3<f32>,
+};
 
 struct VertexOutput {
-        @builtin(position) position: vec4<f32>,
-        @location(0) world_position: vec4<f32>,
-        @location(1) mesh_id: f32,
-        @location(2) outline_width: f32,
-        @location(3) priority: f32,
-        @location(4) outline_color: vec3<f32>,
-    };
+    @builtin(position) position: vec4<f32>,
+    @location(0) world_position: vec4<f32>,
+    @location(1) mesh_id: f32,
+    @location(2) outline_width: f32,
+    @location(3) priority: f32,
+    @location(4) outline_color: vec3<f32>,
+};
 
 struct FragmentOutput {
     @location(0) flood_data: vec4<f32>,
@@ -59,7 +57,7 @@ fn morph_vertex(vertex_in: Vertex) -> Vertex {
 #endif
 
 
-    @vertex
+@vertex
 fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
@@ -71,7 +69,7 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 
     #ifdef SKINNED
         var world_from_local = skinning::skin_model(vertex.joint_indices, vertex.joint_weights,
-            vertex.instance_index  // Use the instance index from your uniform instead
+            vertex.instance_index 
         );
     #else
         let world_from_local = mesh_functions::get_world_from_local(vertex_no_morph.instance_index);

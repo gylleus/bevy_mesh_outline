@@ -1,8 +1,8 @@
 mod compose;
 mod flood;
 mod mask;
-mod mask_node;
 mod mask_pipeline;
+mod node;
 mod queue;
 mod render;
 mod shaders;
@@ -15,7 +15,6 @@ use bevy::{
     math::Affine3,
     pbr::{DrawMesh, SetMeshBindGroup, SetMeshViewBindGroup, extract_skins},
     prelude::*,
-    scene::SceneInstanceReady,
 };
 use bevy_render::{
     Render, RenderApp, RenderDebugFlags, RenderSet,
@@ -32,8 +31,8 @@ use bevy_render::{
 use compose::ComposeOutputPipeline;
 use flood::{JumpFloodPipeline, prepare_flood_settings};
 use mask::MeshOutline3d;
-use mask_node::OutlineMaskNode;
-use mask_pipeline::MeshOutlinePipeline;
+use mask_pipeline::MeshMaskPipeline;
+use node::MeshOutlineNode;
 use queue::queue_outline;
 use rand::Rng;
 use render::{OutlineBindGroups, SetOutlineBindGroup, prepare_outline_bind_groups};
@@ -63,16 +62,14 @@ impl Plugin for MeshOutlinePlugin {
         app.register_type::<MeshOutline>();
 
         app.add_plugins(
-            BinnedRenderPhasePlugin::<MeshOutline3d, MeshOutlinePipeline>::new(
+            BinnedRenderPhasePlugin::<MeshOutline3d, MeshMaskPipeline>::new(
                 RenderDebugFlags::default(),
             ),
         );
 
-        app.add_systems(Update, propagate_outline_changes);
-
         app.sub_app_mut(RenderApp)
             .init_resource::<DrawFunctions<MeshOutline3d>>()
-            .init_resource::<SpecializedMeshPipelines<MeshOutlinePipeline>>()
+            .init_resource::<SpecializedMeshPipelines<MeshMaskPipeline>>()
             .init_resource::<ViewBinnedRenderPhases<MeshOutline3d>>()
             .init_resource::<ExtractedOutlines>()
             .init_resource::<OutlineBindGroups>()
@@ -90,25 +87,23 @@ impl Plugin for MeshOutlinePlugin {
                         prepare_outline_bind_groups.after(prepare_flood_textures),
                     )
                         .in_set(RenderSet::PrepareBindGroups),
-                    batch_and_prepare_binned_render_phase::<MeshOutline3d, MeshOutlinePipeline>
+                    batch_and_prepare_binned_render_phase::<MeshOutline3d, MeshMaskPipeline>
                         .in_set(RenderSet::PrepareResources),
                 ),
             )
             .add_render_command::<MeshOutline3d, DrawOutline>()
-            .add_render_graph_node::<ViewNodeRunner<OutlineMaskNode>>(
+            .add_render_graph_node::<ViewNodeRunner<MeshOutlineNode>>(
                 Core3d,
-                OutlineNode::MeshOutlineMaskPass,
+                OutlineNode::MeshOutlineNode,
             )
             .add_render_graph_edges(
                 Core3d,
                 (
                     Node3d::EndMainPass,
-                    OutlineNode::MeshOutlineMaskPass,
+                    OutlineNode::MeshOutlineNode,
                     Node3d::Bloom,
                 ),
             );
-
-        app.add_observer(apply_recursively);
     }
 
     fn finish(&self, app: &mut App) {
@@ -116,7 +111,7 @@ impl Plugin for MeshOutlinePlugin {
             return;
         };
         render_app
-            .init_resource::<MeshOutlinePipeline>()
+            .init_resource::<MeshMaskPipeline>()
             .init_resource::<JumpFloodPipeline>()
             .init_resource::<ComposeOutputPipeline>();
     }
@@ -170,7 +165,7 @@ pub struct ExtractedOutline {
     pub width: f32,
     pub id: f32,
     pub priority: f32,
-    pub color: Vec3,
+    pub color: Vec4,
     pub world_from_local: [Vec4; 3],
 }
 
@@ -189,27 +184,9 @@ impl ExtractComponent for MeshOutline {
             width: outline.width,
             id: outline.id,
             priority: outline.priority,
-            color: Vec3::new(linear_color.red, linear_color.green, linear_color.blue),
+            color: linear_color.to_vec4(),
             world_from_local: Affine3::from(&transform.affine()).to_transpose(),
         })
-    }
-}
-
-fn apply_recursively(
-    trigger: Trigger<SceneInstanceReady>,
-    mut commands: Commands,
-    outline_instances: Query<&MeshOutline>,
-    meshes: Query<&Mesh3d>,
-    children: Query<&Children>,
-) {
-    let Ok(outline) = outline_instances.get(trigger.target()) else {
-        return;
-    };
-
-    for child in children.iter_descendants(trigger.target()) {
-        if meshes.contains(child) {
-            commands.entity(child).insert(outline.clone());
-        }
     }
 }
 
@@ -228,20 +205,5 @@ fn extract_outlines_to_resource(
 
 #[derive(Copy, Clone, Debug, RenderLabel, Hash, PartialEq, Eq)]
 pub enum OutlineNode {
-    MeshOutlineMaskPass,
-}
-
-fn propagate_outline_changes(
-    mut commands: Commands,
-    changed: Query<(Entity, &MeshOutline), Changed<MeshOutline>>,
-    meshes: Query<&Mesh3d>,
-    children: Query<&Children>,
-) {
-    for (entity, outline) in changed.iter() {
-        for child in children.iter_descendants(entity) {
-            if meshes.contains(child) {
-                commands.entity(child).insert(outline.clone());
-            }
-        }
-    }
+    MeshOutlineNode,
 }

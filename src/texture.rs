@@ -12,10 +12,15 @@ use super::OutlineCamera;
 #[derive(Clone, Component)]
 pub struct FloodTextures {
     pub flip: bool,
+    // Textures for storing input-output of flood passes
     pub input: CachedTexture,
     pub output: CachedTexture,
+    /// A dedicated depth texture for mesh outlines to later compare against
+    /// global depth
     pub outline_depth_texture: Texture,
-    pub outline_color_storage: CachedTexture,
+    /// Stores data needed for JFA execution (UVs, width and depth)
+    pub outline_flood_data: CachedTexture,
+    /// Stores outline color and mesh data
     pub appearance_texture: CachedTexture,
 }
 
@@ -90,10 +95,8 @@ pub fn prepare_flood_textures(
             input: texture_cache.get(&render_device, texture_descriptor.clone()),
             output: texture_cache.get(&render_device, texture_descriptor.clone()),
             outline_depth_texture: depth_texture,
-            outline_color_storage: texture_cache
-                .get(&render_device, color_storage_texture_descriptor),
-            appearance_texture: texture_cache
-                .get(&render_device, texture_descriptor),
+            outline_flood_data: texture_cache.get(&render_device, color_storage_texture_descriptor),
+            appearance_texture: texture_cache.get(&render_device, texture_descriptor),
         });
         texture_cache.update();
     }

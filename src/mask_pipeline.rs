@@ -30,13 +30,12 @@ use crate::shaders::MASK_SHADER_HANDLE;
 use super::{ExtractedOutline, ExtractedOutlines, uniforms::OutlineUniform};
 
 #[derive(Resource)]
-pub struct MeshOutlinePipeline {
+pub struct MeshMaskPipeline {
     pub mesh_pipeline: MeshPipeline,
-
     pub outline_bind_group_layout: BindGroupLayout,
 }
 
-impl FromWorld for MeshOutlinePipeline {
+impl FromWorld for MeshMaskPipeline {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.get_resource::<RenderDevice>().unwrap();
 
@@ -44,15 +43,11 @@ impl FromWorld for MeshOutlinePipeline {
             "OutlineInstance",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::VERTEX_FRAGMENT,
-                (
-                    uniform_buffer::<OutlineUniform>(false),
-                    // texture_storage_2d(TextureFormat::Rgba32Float, StorageTextureAccess::ReadWrite),
-                ),
+                (uniform_buffer::<OutlineUniform>(false),),
             ),
         );
 
         let mesh_pipeline = MeshPipeline::from_world(world);
-        // mesh_pipeline.skins_use_uniform_buffers = true;
 
         Self {
             mesh_pipeline,
@@ -62,7 +57,7 @@ impl FromWorld for MeshOutlinePipeline {
     }
 }
 
-impl SpecializedMeshPipeline for MeshOutlinePipeline {
+impl SpecializedMeshPipeline for MeshMaskPipeline {
     type Key = MeshPipelineKey;
 
     fn specialize(
@@ -111,7 +106,7 @@ impl SpecializedMeshPipeline for MeshOutlinePipeline {
     }
 }
 
-impl GetBatchData for MeshOutlinePipeline {
+impl GetBatchData for MeshMaskPipeline {
     type Param = (
         SRes<RenderMeshInstances>,
         SRes<RenderAssets<RenderMesh>>,
@@ -119,8 +114,6 @@ impl GetBatchData for MeshOutlinePipeline {
         SRes<SkinUniforms>,
         SRes<ExtractedOutlines>,
     );
-    // The material bind group ID, the mesh ID, and the lightmap ID,
-    // respectively.
     type CompareData = (AssetId<Mesh>, ExtractedOutline);
 
     type BufferData = MeshUniform;
@@ -131,7 +124,7 @@ impl GetBatchData for MeshOutlinePipeline {
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         tracing::info!("get_batch_data for outline pipeline");
         let RenderMeshInstances::CpuBuilding(ref mesh_instances) = **mesh_instances else {
-            error!(
+            tracing::error!(
                 "`get_batch_data` should never be called in GPU mesh uniform \
                 building mode"
             );
@@ -162,7 +155,7 @@ impl GetBatchData for MeshOutlinePipeline {
     }
 }
 
-impl GetFullBatchData for MeshOutlinePipeline {
+impl GetFullBatchData for MeshMaskPipeline {
     type BufferInputData = MeshInputUniform;
 
     fn get_index_and_compare_data(
@@ -171,9 +164,9 @@ impl GetFullBatchData for MeshOutlinePipeline {
     ) -> Option<(NonMaxU32, Option<Self::CompareData>)> {
         // This should only be called during GPU building.
         let RenderMeshInstances::GpuBuilding(ref mesh_instances) = **mesh_instances else {
-            error!(
-                "`get_index_and_compare_data` should never be called in CPU mesh uniform building \
-                mode"
+            tracing::error!(
+                "`get_batch_data` should never be called in GPU mesh uniform \
+                building mode"
             );
             return None;
         };
@@ -195,7 +188,7 @@ impl GetFullBatchData for MeshOutlinePipeline {
     ) -> Option<Self::BufferData> {
         tracing::info!("get_binned_batch_data for outline pipeline");
         let RenderMeshInstances::CpuBuilding(ref mesh_instances) = **mesh_instances else {
-            error!(
+            tracing::error!(
                 "`get_binned_batch_data` should never be called in GPU mesh uniform building mode"
             );
             return None;
@@ -225,8 +218,8 @@ impl GetFullBatchData for MeshOutlinePipeline {
     ) -> Option<NonMaxU32> {
         // This should only be called during GPU building.
         let RenderMeshInstances::GpuBuilding(ref mesh_instances) = **mesh_instances else {
-            error!(
-                "`get_binned_index` should never be called in CPU mesh uniform \
+            tracing::error!(
+                "`get_batch_data` should never be called in GPU mesh uniform \
                 building mode"
             );
             return None;

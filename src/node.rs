@@ -21,8 +21,8 @@ use super::{
 };
 
 #[derive(Default)]
-pub struct OutlineMaskNode;
-impl ViewNode for OutlineMaskNode {
+pub struct MeshOutlineNode;
+impl ViewNode for MeshOutlineNode {
     type ViewQuery = (
         Entity,
         &'static ExtractedView,
@@ -75,7 +75,7 @@ impl ViewNode for OutlineMaskNode {
             &ImageSubresourceRange::default(),
         );
         render_context.command_encoder().clear_texture(
-            &flood_textures.outline_color_storage.texture,
+            &flood_textures.outline_flood_data.texture,
             &ImageSubresourceRange::default(),
         );
         render_context.command_encoder().clear_texture(
@@ -189,7 +189,7 @@ impl ViewNode for OutlineMaskNode {
                 flood_textures.input(),
                 flood_textures.output(),
                 &outline_depth_view,
-                &flood_textures.outline_color_storage.default_view,
+                &flood_textures.outline_flood_data.default_view,
                 &flood_textures.appearance_texture.default_view,
                 size,
             );
