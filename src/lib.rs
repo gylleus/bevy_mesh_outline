@@ -129,7 +129,6 @@ pub struct OutlineCamera;
 pub struct MeshOutline {
     pub intensity: f32,
     pub width: f32,
-    pub id: f32,
     pub priority: f32,
     pub color: Color,
 }
@@ -140,7 +139,6 @@ impl MeshOutline {
         Self {
             intensity: 1.0,
             width,
-            id: rng.random(),
             priority: 0.0,
             color: Color::BLACK,
         }
@@ -182,7 +180,7 @@ impl ExtractComponent for MeshOutline {
         Some(ExtractedOutline {
             intensity: outline.intensity,
             width: outline.width,
-            id: outline.id,
+            id: 0.0,
             priority: outline.priority,
             color: linear_color.to_vec4(),
             world_from_local: Affine3::from(&transform.affine()).to_transpose(),
@@ -198,8 +196,15 @@ fn extract_outlines_to_resource(
     outlines: Query<(&MainEntity, &ExtractedOutline)>,
 ) {
     extracted_outlines.0.clear();
+    // Counter for mesh_ids
+    let mut current_id = 0.0;
+    let total_outlines = outlines.iter().count();
+
     for (main_entity, outline) in outlines.iter() {
-        extracted_outlines.0.insert(*main_entity, outline.clone());
+        let mut outline = outline.clone();
+        outline.id = current_id;
+        current_id += 1.0 / total_outlines as f32;
+        extracted_outlines.0.insert(*main_entity, outline);
     }
 }
 
