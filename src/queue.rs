@@ -64,21 +64,18 @@ pub fn queue_outline(
             mesh_key |= MeshPipelineKey::from_primitive_topology(mesh.primitive_topology())
                 | MeshPipelineKey::from_bits_retain(mesh.key_bits.bits());
 
-            let pipeline_id = mesh_outline_pipelines
-                .specialize(
-                    &pipeline_cache,
-                    &mesh_outline_pipeline,
-                    mesh_key,
-                    &mesh.layout,
-                )
-                // This should never with this example, but if your pipeline specialization
-                // can fail you need to handle the error here
-                .expect("Failed to specialize mesh pipeline");
+            let Ok(pipeline_id) = mesh_outline_pipelines.specialize(
+                &pipeline_cache,
+                &mesh_outline_pipeline,
+                mesh_key,
+                &mesh.layout,
+            ) else {
+                tracing::warn!(target: "bevy_mesh_outline", "Failed to specialize mesh pipeline");
+                continue;
+            };
 
             let next_change_tick = change_tick.get() + 1;
             change_tick.set(next_change_tick);
-
-            // tracing::info!("Queuing outline for entity {:?}", main_entity);
 
             outline_phase.add(
                 OutlineBatchSetKey {

@@ -10,8 +10,8 @@
 struct Instance {
     intensity: f32,
     width: f32,
-    mesh_id: f32,
     priority: f32,
+    _padding: f32,
     outline_color: vec3<f32>,
 };
 
@@ -87,8 +87,8 @@ fn fragment(vertex: VertexOutput) -> FragmentOutput {
     var output: FragmentOutput;
     // RT0: seed_uv.xy, outline_width, depth
     output.flood_data = vec4<f32>(uv, outline_instance.width, depth);
-    // RT1: outline_color.rgb, priority + mesh_id
-    output.appearance_data = vec4<f32>(outline_instance.outline_color * outline_instance.intensity, outline_instance.priority + outline_instance.mesh_id);
+    // RT1: outline_color.rgb, priority
+    output.appearance_data = vec4<f32>(outline_instance.outline_color * outline_instance.intensity, outline_instance.priority);
 
     return output;
 }

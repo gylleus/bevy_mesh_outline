@@ -27,14 +27,11 @@ impl PhaseItemBatchSetKey for OutlineBatchSetKey {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct OutlineBinKey {
-    // pub pipeline: CachedRenderPipelineId,
-    // pub draw_function: DrawFunctionId,
     pub asset_id: UntypedAssetId,
 }
 
 pub(crate) struct MeshOutline3d {
     pub batch_set_key: OutlineBatchSetKey,
-    pub _key: OutlineBinKey,
     pub entity: Entity,
     pub main_entity: MainEntity,
     pub batch_range: Range<u32>,
@@ -83,14 +80,13 @@ impl BinnedPhaseItem for MeshOutline3d {
 
     fn new(
         batch_set_key: Self::BatchSetKey,
-        key: Self::BinKey,
+        _key: Self::BinKey,
         representative_entity: (Entity, MainEntity),
         batch_range: Range<u32>,
         extra_index: PhaseItemExtraIndex,
     ) -> Self {
         Self {
             batch_set_key,
-            _key: key,
             entity: representative_entity.0,
             main_entity: representative_entity.1,
             batch_range,

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bevy::{
     core_pipeline::fullscreen_vertex_shader::fullscreen_shader_vertex_state,
     prelude::*,
@@ -26,7 +28,7 @@ use super::{ExtractedOutline, OutlineCamera};
 #[derive(ShaderType)]
 pub struct JumpFloodUniform {
     #[align(16)]
-    pub size: u32,
+    pub step_length: u32,
 }
 
 #[derive(Component, Default, Clone)]
@@ -61,7 +63,7 @@ pub struct JumpFloodPipeline {
 
 impl FromWorld for JumpFloodPipeline {
     fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
+        let render_device = world.resource::<RenderDevice>().clone();
 
         let layout = render_device.create_bind_group_layout(
             "outline_jump_flood_bind_group_layout",
@@ -107,16 +109,17 @@ impl FromWorld for JumpFloodPipeline {
                     zero_initialize_workgroup_memory: false,
                 });
 
-        let render_device = world.resource::<RenderDevice>();
         let render_queue = world.resource::<RenderQueue>();
         let mut uniform_buffer = DynamicUniformBuffer::new_with_alignment(
             render_device.limits().min_uniform_buffer_offset_alignment as u64,
         );
         let mut offsets = Vec::new();
         for bit in 0..32 {
-            offsets.push(uniform_buffer.push(&JumpFloodUniform { size: 1 << bit }));
+            offsets.push(uniform_buffer.push(&JumpFloodUniform {
+                step_length: 1 << bit,
+            }));
         }
-        uniform_buffer.write_buffer(render_device, render_queue);
+        uniform_buffer.write_buffer(&render_device, render_queue);
 
         Self {
             layout,
