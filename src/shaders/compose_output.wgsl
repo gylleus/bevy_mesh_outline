@@ -35,9 +35,6 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let outline_color = appearance.rgb;
     let priority_and_mesh_id = appearance.w;
     
-    // Extract mesh ID for highlighting (fractional part)
-    let mesh_id = fract(priority_and_mesh_id);
-    
     // Only render outline when it's behind the current geometry
     if outline_depth > current_depth {
         // Calculate outline intensity based on distance (optional)

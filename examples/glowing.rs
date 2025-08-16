@@ -1,6 +1,6 @@
 use bevy::{
-    color::palettes::css::{SILVER, YELLOW},
-    core_pipeline::prepass::DepthPrepass,
+    color::palettes::css::{BLUE, RED, SILVER, YELLOW},
+    core_pipeline::{bloom::Bloom, prepass::DepthPrepass},
     input::keyboard::KeyboardInput,
     prelude::*,
 };
@@ -12,16 +12,15 @@ fn main() {
             DefaultPlugins.set(ImagePlugin::default_nearest()),
             MeshOutlinePlugin,
         ))
-        .add_systems(Startup, (setup, setup_ui))
-        .add_systems(
-            FixedUpdate,
-            (
-                rotate,
-                update_size.run_if(on_event::<KeyboardInput>),
-                update_width_display,
-            ),
-        )
+        .add_systems(Startup, setup)
+        .add_systems(FixedUpdate, (rotate, oscillate_intensity))
         .run();
+}
+
+#[derive(Component)]
+struct OutlineGlow {
+    intensity: f32,
+    period: f32,
 }
 
 fn setup(
@@ -36,6 +35,12 @@ fn setup(
         OutlineCamera,
         DepthPrepass,
         Msaa::Off,
+        Camera {
+            hdr: true,
+            ..default()
+        },
+        // Turn on bloom
+        Bloom::default(),
     ));
 
     commands.spawn((
@@ -57,10 +62,14 @@ fn setup(
 
     commands.spawn((
         Mesh3d(meshes.add(Cuboid::default())),
-        MeshMaterial3d(materials.add(Color::from(YELLOW))),
+        MeshMaterial3d(materials.add(Color::from(BLUE))),
         Transform::from_xyz(0.0, 1.0, 0.0),
         // Add outline
-        MeshOutline::new(10.0),
+        MeshOutline::new(10.0).with_color(Color::from(RED)),
+        OutlineGlow {
+            intensity: 50.0,
+            period: 0.25,
+        },
     ));
 }
 
@@ -73,47 +82,10 @@ fn rotate(mut query: Query<&mut Transform, With<MeshOutline>>, time: Res<Time>) 
     }
 }
 
-fn update_size(input: Res<ButtonInput<KeyCode>>, mut outline: Single<&mut MeshOutline>) {
-    let mut delta = 0.0;
-    let change_speed = 0.1;
+fn oscillate_intensity(mut query: Query<(&mut MeshOutline, &OutlineGlow)>, time: Res<Time>) {
+    for (mut outline, glow) in &mut query {
+        let t = (time.elapsed_secs() / glow.period).sin() * 0.5 + 0.5; // Normalize to [0, 1]
 
-    if input.pressed(KeyCode::KeyQ) {
-        delta -= change_speed;
-    } else if input.pressed(KeyCode::KeyW) {
-        delta += change_speed;
+        outline.intensity = glow.intensity * t;
     }
-
-    outline.width += delta;
-}
-
-#[derive(Component)]
-struct WidthText;
-
-fn setup_ui(mut commands: Commands) {
-    commands.spawn((
-        Text::new("Decrease width (Q)\nIncrease width (W)\nCurrent width: 5.0"),
-        TextFont {
-            font_size: 16.0,
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(10.0),
-            right: Val::Px(10.0),
-            ..default()
-        },
-        WidthText,
-    ));
-}
-
-fn update_width_display(
-    outline_query: Single<&MeshOutline>,
-    mut text_query: Single<&mut Text, With<WidthText>>,
-) {
-    let width = outline_query.width;
-    text_query.0 = format!(
-        "Decrease width (Q)\nIncrease width (W)\nCurrent width: {:.1}",
-        width
-    );
 }

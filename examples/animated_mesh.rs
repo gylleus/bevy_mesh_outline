@@ -108,10 +108,6 @@ fn setup_camera_and_environment(
         OutlineCamera,
         DepthPrepass,
         Msaa::Off,
-        Camera {
-            hdr: true,
-            ..default()
-        },
     ));
 
     // Plane

@@ -38,7 +38,7 @@ use queue::queue_outline;
 use rand::Rng;
 use render::{OutlineBindGroups, SetOutlineBindGroup, prepare_outline_bind_groups};
 use texture::prepare_flood_textures;
-use view::extract_outline_view_uniforms;
+use view::update_views;
 
 use crate::shaders::load_shaders;
 
@@ -78,12 +78,11 @@ impl Plugin for MeshOutlinePlugin {
             .init_resource::<OutlineBindGroups>()
             .add_systems(
                 ExtractSchedule,
-                (extract_outline_view_uniforms, extract_outlines_for_batch).after(extract_skins),
+                (update_views, extract_outlines_to_resource).after(extract_skins),
             )
             .add_systems(
                 Render,
                 (
-                    // prepare_mesh_bind_groups.in_set(RenderSet::PrepareBindGroups),
                     queue_outline.in_set(RenderSet::QueueMeshes),
                     (
                         prepare_flood_settings,
@@ -123,14 +122,17 @@ impl Plugin for MeshOutlinePlugin {
     }
 }
 
+/// Marker component for enabling a 3D camera to render mesh outlines.
 #[derive(Debug, Component, Reflect, Clone, ExtractComponent)]
 #[reflect(Component)]
 pub struct OutlineCamera;
 
+/// Adds a mesh outline effect to entity.
+/// Should be added to the entity containing the Mesh3d component.
 #[derive(Debug, Component, Reflect, Clone)]
 #[reflect(Component)]
 pub struct MeshOutline {
-    pub highlight: f32,
+    pub intensity: f32,
     pub width: f32,
     pub id: f32,
     pub priority: f32,
@@ -141,7 +143,7 @@ impl MeshOutline {
     pub fn new(width: f32) -> Self {
         let rng = &mut rand::rng();
         Self {
-            highlight: 0.0,
+            intensity: 1.0,
             width,
             id: rng.random(),
             priority: 0.0,
@@ -149,8 +151,8 @@ impl MeshOutline {
         }
     }
 
-    pub fn with_highlight(self, highlight: f32) -> Self {
-        Self { highlight, ..self }
+    pub fn with_intensity(self, intensity: f32) -> Self {
+        Self { intensity, ..self }
     }
 
     pub fn with_priority(self, priority: f32) -> Self {
@@ -164,7 +166,7 @@ impl MeshOutline {
 
 #[derive(Debug, Component, Reflect, Clone, PartialEq)]
 pub struct ExtractedOutline {
-    pub highlight: f32,
+    pub intensity: f32,
     pub width: f32,
     pub id: f32,
     pub priority: f32,
@@ -183,7 +185,7 @@ impl ExtractComponent for MeshOutline {
     ) -> Option<Self::Out> {
         let linear_color: LinearRgba = outline.color.into();
         Some(ExtractedOutline {
-            highlight: outline.highlight,
+            intensity: outline.intensity,
             width: outline.width,
             id: outline.id,
             priority: outline.priority,
@@ -214,7 +216,7 @@ fn apply_recursively(
 #[derive(Resource, Clone, Default)]
 pub struct ExtractedOutlines(MainEntityHashMap<ExtractedOutline>);
 
-fn extract_outlines_for_batch(
+fn extract_outlines_to_resource(
     mut extracted_outlines: ResMut<ExtractedOutlines>,
     outlines: Query<(&MainEntity, &ExtractedOutline)>,
 ) {

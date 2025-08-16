@@ -37,7 +37,6 @@ impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetOutlineBindGroup<I> {
             RenderCommandResult::Success
         } else {
             // Bind group not ready yet, skip this frame
-            tracing::warn!("No outline bind group found for entity {:?}", item.main_entity());
             RenderCommandResult::Skip
         }
     }
@@ -57,7 +56,7 @@ pub fn prepare_outline_bind_groups(
     for (entity, outline) in extracted_outlines.0.iter() {
         // Create uniform
         let outline_uniform = OutlineUniform {
-            highlight: outline.highlight,
+            intensity: outline.intensity,
             width: outline.width,
             id: outline.id,
             priority: outline.priority,

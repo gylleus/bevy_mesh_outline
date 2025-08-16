@@ -22,6 +22,7 @@ use crate::shaders::COMPOSE_SHADER_HANDLE;
 pub struct ComposeOutputPipeline {
     pub layout: BindGroupLayout,
     pub pipeline_id: CachedRenderPipelineId,
+    pub hdr_pipeline_id: CachedRenderPipelineId,
 }
 
 impl FromWorld for ComposeOutputPipeline {
@@ -43,37 +44,48 @@ impl FromWorld for ComposeOutputPipeline {
             ),
         );
 
-        let pipeline_id = world
-            .resource_mut::<PipelineCache>()
-            // This will add the pipeline to the cache and queue its creation
-            .queue_render_pipeline(RenderPipelineDescriptor {
-                label: Some("outline_compose_output_pipeline".into()),
-                layout: vec![layout.clone()],
-                // This will setup a fullscreen triangle for the vertex state
-                vertex: fullscreen_shader_vertex_state(),
-                fragment: Some(FragmentState {
-                    shader: COMPOSE_SHADER_HANDLE,
-                    shader_defs: vec![],
-                    entry_point: "fragment".into(),
-                    targets: vec![Some(ColorTargetState {
-                        // format: TextureFormat::bevy_default(),
-                        format: TextureFormat::Rgba16Float,
-                        blend: None,
-                        write_mask: ColorWrites::ALL,
-                    })],
-                }),
-                // All of the following properties are not important for this effect so just use the default values.
-                // This struct doesn't have the Default trait implemented because not all fields can have a default value.
-                primitive: PrimitiveState::default(),
-                depth_stencil: None,
-                multisample: MultisampleState::default(),
-                push_constant_ranges: vec![],
-                zero_initialize_workgroup_memory: false,
-            });
+        let target = Some(ColorTargetState {
+            format: TextureFormat::bevy_default(),
+            blend: None,
+            write_mask: ColorWrites::ALL,
+        });
+        let hdr_target = Some(ColorTargetState {
+            format: TextureFormat::Rgba16Float,
+            blend: None,
+            write_mask: ColorWrites::ALL,
+        });
 
+        let descriptor = RenderPipelineDescriptor {
+            label: Some("outline_compose_output_pipeline".into()),
+            layout: vec![layout.clone()],
+            // This will setup a fullscreen triangle for the vertex state
+            vertex: fullscreen_shader_vertex_state(),
+            fragment: Some(FragmentState {
+                shader: COMPOSE_SHADER_HANDLE,
+                shader_defs: vec![],
+                entry_point: "fragment".into(),
+                targets: vec![target],
+            }),
+            primitive: PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: MultisampleState::default(),
+            push_constant_ranges: vec![],
+            zero_initialize_workgroup_memory: false,
+        };
+        let mut hdr_descriptor = descriptor.clone();
+        hdr_descriptor.fragment.as_mut().unwrap().targets = vec![hdr_target];
+
+        let (pipeline_id, hdr_pipeline_id) = {
+            let cache = world.resource_mut::<PipelineCache>();
+            (
+                cache.queue_render_pipeline(descriptor),
+                cache.queue_render_pipeline(hdr_descriptor),
+            )
+        };
         Self {
             layout,
             pipeline_id,
+            hdr_pipeline_id,
         }
     }
 }

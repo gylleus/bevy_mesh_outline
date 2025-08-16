@@ -48,29 +48,16 @@ impl ViewNode for OutlineMaskNode {
         ): QueryItem<'w, Self::ViewQuery>,
         world: &'w World,
     ) -> Result<(), NodeRunError> {
-        if let Some(target_size) = camera.physical_target_size {
-            let current_size = flood_textures.input.texture.size();
-            if current_size.width != target_size.x || current_size.height != target_size.y {
-                tracing::warn!("Texture size mismatch, recreating flood textures");
-            }
-        }
-
         let Some(outline_phases) = world.get_resource::<ViewBinnedRenderPhases<MeshOutline3d>>()
         else {
-            tracing::warn!("No outline phases found in the world");
             return Ok(());
         };
 
         let Some(outline_phase) = outline_phases.get(&extracted_view.retained_view_entity) else {
-            tracing::warn!(
-                "No outline phases found for view {:?}",
-                extracted_view.retained_view_entity
-            );
             return Ok(());
         };
 
         let Some(mut jump_flood_pass) = JumpFloodPass::new(world) else {
-            tracing::warn!("No jump flood pass found in the world");
             return Ok(());
         };
         let mut flood_textures = flood_textures.clone();
@@ -140,12 +127,10 @@ impl ViewNode for OutlineMaskNode {
                     Some(flood_color_attachment),
                     Some(appearance_color_attachment),
                 ],
-                // depth_stencil_attachment: depth_stencil_attachment,
                 depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
                     view: &outline_depth_view,
                     depth_ops: Some(Operations {
                         load: LoadOp::Clear(0.0),
-                        // load: LoadOp::Load,
                         store: StoreOp::Store,
                     }),
                     stencil_ops: None,
@@ -164,15 +149,21 @@ impl ViewNode for OutlineMaskNode {
         }
 
         let Some(compose_pipeline) = world.get_resource::<ComposeOutputPipeline>() else {
-            tracing::warn!("No compose pipeline found in the world");
+            // Skip
             return Ok(());
         };
+
         let pipeline_cache = world.resource::<PipelineCache>();
 
+        let pipeline_id = if view_target.is_hdr() {
+            compose_pipeline.hdr_pipeline_id
+        } else {
+            compose_pipeline.pipeline_id
+        };
+
         // Get the pipeline from the cache
-        let Some(pipeline) = pipeline_cache.get_render_pipeline(compose_pipeline.pipeline_id)
-        else {
-            tracing::warn!("No compose pipeline found in the cache");
+        let Some(pipeline) = pipeline_cache.get_render_pipeline(pipeline_id) else {
+            // Skip
             return Ok(());
         };
 

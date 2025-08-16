@@ -39,10 +39,9 @@ pub fn queue_outline(
             continue;
         };
 
-        // Create the key based on the view. In this case we only care about MSAA and HDR
-        let view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
-            | MeshPipelineKey::DEPTH_PREPASS
-            | MeshPipelineKey::from_hdr(view.hdr);
+        let view_key =
+            MeshPipelineKey::from_msaa_samples(msaa.samples()) | MeshPipelineKey::DEPTH_PREPASS;
+        // | MeshPipelineKey::from_hdr(view.hdr);
 
         for &(render_entity, main_entity) in visible_entities.get::<Mesh3d>().iter() {
             if !outlined_meshes.get(render_entity).is_ok() {

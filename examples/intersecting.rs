@@ -50,10 +50,6 @@ fn setup(
         OutlineCamera,
         DepthPrepass,
         Msaa::Off,
-        Camera {
-            hdr: true,
-            ..default()
-        },
     ));
 
     commands.spawn((
@@ -90,7 +86,7 @@ fn setup(
         Transform::from_xyz(-0.5, 1.0, 0.5),
         MeshOutline::new(10.0)
             .with_color(Color::from(GREEN))
-            .with_highlight(10.0),
+            .with_intensity(10.0),
         OutlinePriority(10.0),
     ));
 }
@@ -113,10 +109,7 @@ fn setup_ui(mut commands: Commands) {
     ));
 }
 
-fn toggle_priority(
-    input: Res<ButtonInput<KeyCode>>,
-    mut priority_toggle: ResMut<PriorityToggle>,
-) {
+fn toggle_priority(input: Res<ButtonInput<KeyCode>>, mut priority_toggle: ResMut<PriorityToggle>) {
     if input.just_pressed(KeyCode::KeyQ) {
         priority_toggle.enabled = !priority_toggle.enabled;
     }
