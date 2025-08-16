@@ -34,7 +34,6 @@ use mask::MeshOutline3d;
 use mask_pipeline::MeshMaskPipeline;
 use node::MeshOutlineNode;
 use queue::queue_outline;
-use rand::Rng;
 use render::{OutlineBindGroups, SetOutlineBindGroup, prepare_outline_bind_groups};
 use texture::prepare_flood_textures;
 use view::update_views;
@@ -129,17 +128,16 @@ pub struct OutlineCamera;
 pub struct MeshOutline {
     pub intensity: f32,
     pub width: f32,
-    pub priority: f32,
+    pub priority: u32,
     pub color: Color,
 }
 
 impl MeshOutline {
     pub fn new(width: f32) -> Self {
-        let rng = &mut rand::rng();
         Self {
             intensity: 1.0,
             width,
-            priority: 0.0,
+            priority: 0,
             color: Color::BLACK,
         }
     }
@@ -148,7 +146,7 @@ impl MeshOutline {
         Self { intensity, ..self }
     }
 
-    pub fn with_priority(self, priority: f32) -> Self {
+    pub fn with_priority(self, priority: u32) -> Self {
         Self { priority, ..self }
     }
 
@@ -181,7 +179,7 @@ impl ExtractComponent for MeshOutline {
             intensity: outline.intensity,
             width: outline.width,
             id: 0.0,
-            priority: outline.priority,
+            priority: outline.priority as f32,
             color: linear_color.to_vec4(),
             world_from_local: Affine3::from(&transform.affine()).to_transpose(),
         })
@@ -202,8 +200,8 @@ fn extract_outlines_to_resource(
 
     for (main_entity, outline) in outlines.iter() {
         let mut outline = outline.clone();
+        current_id += (1.0 - 0.01) / total_outlines as f32;
         outline.id = current_id;
-        current_id += 1.0 / total_outlines as f32;
         extracted_outlines.0.insert(*main_entity, outline);
     }
 }

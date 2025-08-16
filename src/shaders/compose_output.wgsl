@@ -35,13 +35,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     
     // Only render outline when it's behind the current geometry
     if outline_depth > current_depth {
-        // Calculate outline intensity based on distance (optional)
-        let distance_to_seed = distance(in.uv, seed_uv);
-        let outline_width = flood_data.z;
-        let intensity = 1.0 - (distance_to_seed * 100.0) / outline_width; // Fade towards edges
-        
-        // Apply outline color with intensity
-        color = vec4<f32>(outline_color * max(intensity, 0.3), 1.0);
+        // Apply outline color
+        color = vec4<f32>(outline_color, 1.0);
     }
     
     return color;

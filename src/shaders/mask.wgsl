@@ -10,7 +10,7 @@
 struct Instance {
     intensity: f32,
     width: f32,
-    id: f32,
+    mesh_id: f32,
     priority: f32,
     outline_color: vec3<f32>,
 };
@@ -18,10 +18,6 @@ struct Instance {
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
-    @location(1) mesh_id: f32,
-    @location(2) outline_width: f32,
-    @location(3) priority: f32,
-    @location(4) outline_color: vec3<f32>,
 };
 
 struct FragmentOutput {
@@ -80,11 +76,6 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
         out.position = position_world_to_clip(out.world_position.xyz);
     #endif
 
-    out.outline_width = outline_instance.width;
-    out.mesh_id = outline_instance.id;
-    out.priority = outline_instance.priority;
-    out.outline_color = outline_instance.outline_color;
-
     return out;
 }
 
@@ -95,9 +86,9 @@ fn fragment(vertex: VertexOutput) -> FragmentOutput {
     
     var output: FragmentOutput;
     // RT0: seed_uv.xy, outline_width, depth
-    output.flood_data = vec4<f32>(uv, vertex.outline_width, depth);
+    output.flood_data = vec4<f32>(uv, outline_instance.width, depth);
     // RT1: outline_color.rgb, priority + mesh_id
-    output.appearance_data = vec4<f32>(vertex.outline_color * outline_instance.intensity, vertex.priority + vertex.mesh_id);
+    output.appearance_data = vec4<f32>(outline_instance.outline_color * outline_instance.intensity, outline_instance.priority + outline_instance.mesh_id);
 
     return output;
 }

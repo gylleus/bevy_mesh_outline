@@ -67,8 +67,8 @@ fn setup(
         // Add outline
         MeshOutline::new(10.0).with_color(Color::from(RED)),
         OutlineGlow {
-            intensity: 50.0,
-            period: 0.25,
+            intensity: 20.0,
+            period: 0.2,
         },
     ));
 }
