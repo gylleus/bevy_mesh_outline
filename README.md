@@ -1,11 +1,13 @@
 # Bevy Mesh Outline
 
+![Simple outlined cube from example](https://raw.githubusercontent.com/gylleus/bevy_mesh_outline/refs/heads/master/assets/outlined_cube.png)
+
 
 This plugin provides outline rendering for 3D meshes using a multi-pass GPU approach with JFA *(jump flood algorithm)* for distance field generation.
 
 ## Features
 
-- **GPU-optimized rendering** - Uses compute-based jump flood algorithm for efficient outline generation
+- **GPU-optimized rendering** - Uses compute-based jump flood algorithm for efficient and smooth outline generation
 - **Customizable outlines** - Control width, color, intensity, and priority per mesh
 - **Depth-aware rendering** - Outlines respect depth relationships and handle intersecting geometry
 - **HDR support** - Works with both standard and HDR rendering pipelines
@@ -61,14 +63,14 @@ Run the included examples to see the plugin in action:
 # Basic rotating cube with adjustable outline width
 cargo run --example simple
 
-# Multiple intersecting objects with priority control
-cargo run --example intersecting
+# Glowing effect example (HDR)
+cargo run --example glowing
 
 # Animated character with outlines
 cargo run --example animated_mesh
 
-# Glowing effect example (HDR)
-cargo run --example glowing
+# Multiple intersecting objects with priority control
+cargo run --example intersecting
 ```
 
 ## How It Works
