@@ -1,4 +1,5 @@
 use bevy::{
+    core_pipeline::prepass::NormalPrepass,
     ecs::component::Tick,
     pbr::{MeshPipelineKey, RenderMeshInstances},
     prelude::*,
@@ -29,19 +30,32 @@ pub fn queue_outline(
     mesh_allocator: Res<MeshAllocator>,
     render_meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
-    views: Query<(Entity, &ExtractedView, &RenderVisibleEntities, &Msaa), With<OutlineCamera>>,
+    views: Query<
+        (
+            Entity,
+            &ExtractedView,
+            &RenderVisibleEntities,
+            &Msaa,
+            Has<NormalPrepass>,
+        ),
+        With<OutlineCamera>,
+    >,
     mut change_tick: Local<Tick>,
 ) {
     let draw_function = draw_functions.read().id::<DrawOutline>();
 
-    for (_view_entity, view, visible_entities, msaa) in views.iter() {
+    for (_view_entity, view, visible_entities, msaa, has_normal_prepass) in views.iter() {
         let Some(outline_phase) = outline_phases.get_mut(&view.retained_view_entity) else {
             continue;
         };
 
-        let view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
+        let mut view_key = MeshPipelineKey::from_msaa_samples(msaa.samples())
             | MeshPipelineKey::DEPTH_PREPASS
             | MeshPipelineKey::from_hdr(view.hdr);
+
+        if has_normal_prepass {
+            view_key |= MeshPipelineKey::NORMAL_PREPASS;
+        }
 
         for &(render_entity, main_entity) in visible_entities.get::<Mesh3d>().iter() {
             if outlined_meshes.get(render_entity).is_err() {
