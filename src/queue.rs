@@ -19,7 +19,7 @@ use crate::{
 
 use super::{ExtractedOutline, MeshOutline3d, OutlineCamera, mask_pipeline::MeshMaskPipeline};
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn queue_outline(
     outlined_meshes: Query<&ExtractedOutline>,
     draw_functions: Res<DrawFunctions<MeshOutline3d>>,

@@ -1,5 +1,10 @@
 # Bevy Mesh Outline
 
+[![crates.io](https://img.shields.io/crates/v/bevy_mesh_outline)](https://crates.io/crates/bevy_mesh_outline)
+[![ci](https://github.com/gylleus/bevy_mesh_outline/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/gylleus/bevy_mesh_outline/actions/workflows/test.yml)
+[![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/gylleus/bevy_mesh_outline#license)
+
+
 ![Simple outlined cube from example](https://raw.githubusercontent.com/gylleus/bevy_mesh_outline/refs/heads/master/assets/outlined_cube.png)
 
 
