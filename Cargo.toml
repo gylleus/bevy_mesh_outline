@@ -8,7 +8,9 @@ repository = "https://github.com/gylleus/bevy_mesh_outline"
 rust-version = "1.89.0"
 description = "A Bevy plugin for rendering 3d mesh outlines."
 categories = ["3d", "rendering", "game-engines"]
+keywords = ["gamedev", "graphics", "bevy", "outline"]
 exclude = [".github/", "assets/"]
+readme = "README.md"
 
 [dependencies]
 bevy = "0.16.1"
