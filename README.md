@@ -1,4 +1,4 @@
-# Bevy Mesh Outline
+# bevy_mesh_outline
 
 [![crates.io](https://img.shields.io/crates/v/bevy_mesh_outline)](https://crates.io/crates/bevy_mesh_outline)
 [![ci](https://github.com/gylleus/bevy_mesh_outline/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/gylleus/bevy_mesh_outline/actions/workflows/test.yml)
