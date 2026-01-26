@@ -3,8 +3,8 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::{
-            BindGroupLayout, BindGroupLayoutEntries, CachedRenderPipelineId, FragmentState,
-            PipelineCache, RenderPipelineDescriptor,
+            BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedRenderPipelineId,
+            FragmentState, PipelineCache, RenderPipelineDescriptor,
             binding_types::{sampler, texture_2d},
         },
         renderer::RenderDevice,
@@ -20,16 +20,16 @@ use crate::shaders::COMPOSE_SHADER_HANDLE;
 
 #[derive(Clone, Resource)]
 pub struct ComposeOutputPipeline {
-    pub layout: BindGroupLayout,
+    pub layout: BindGroupLayoutDescriptor,
     pub pipeline_id: CachedRenderPipelineId,
     pub hdr_pipeline_id: CachedRenderPipelineId,
 }
 
 impl FromWorld for ComposeOutputPipeline {
     fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
+        let _render_device = world.resource::<RenderDevice>();
 
-        let layout = render_device.create_bind_group_layout(
+        let layout = BindGroupLayoutDescriptor::new(
             "outline_compose_output_bind_group_layout",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::FRAGMENT,

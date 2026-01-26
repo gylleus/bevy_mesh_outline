@@ -5,7 +5,6 @@
 // by checking neighbors at exponentially decreasing step sizes
 
 struct JumpFloodUniform {
-    @align(16)
     step_length: u32,
 }
 

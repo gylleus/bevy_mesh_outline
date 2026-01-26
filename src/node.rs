@@ -10,7 +10,6 @@ use bevy_render::{
     renderer::RenderContext,
     view::{ExtractedView, ViewTarget},
 };
-use wgpu_types::ImageSubresourceRange;
 
 use crate::MeshOutline3d;
 
@@ -66,27 +65,8 @@ impl ViewNode for MeshOutlineNode {
             return Ok(());
         };
 
-        render_context.command_encoder().clear_texture(
-            &flood_textures.input.texture,
-            &ImageSubresourceRange::default(),
-        );
-        render_context.command_encoder().clear_texture(
-            &flood_textures.output.texture,
-            &ImageSubresourceRange::default(),
-        );
-        render_context.command_encoder().clear_texture(
-            &flood_textures.outline_flood_data.texture,
-            &ImageSubresourceRange::default(),
-        );
-        render_context.command_encoder().clear_texture(
-            &flood_textures.appearance_texture.texture,
-            &ImageSubresourceRange::default(),
-        );
-
-        render_context.command_encoder().clear_texture(
-            &flood_textures.outline_depth_texture,
-            &ImageSubresourceRange::default(),
-        );
+        // Note: Textures are cleared via LoadOp::Clear in the render passes below
+        // clear_texture is not supported in WebGPU backend
 
         let flood_color_attachment = RenderPassColorAttachment {
             view: &flood_textures.output.default_view,
@@ -199,7 +179,9 @@ impl ViewNode for MeshOutlineNode {
 
         let bind_group = render_context.render_device().create_bind_group(
             "compose_output_bind_group",
-            &compose_pipeline.layout,
+            &world
+                .resource::<PipelineCache>()
+                .get_bind_group_layout(&compose_pipeline.layout),
             &BindGroupEntries::sequential((
                 // binding 0: screen_texture - The original scene color
                 post_process.source,

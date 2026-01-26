@@ -16,9 +16,9 @@ use bevy_render::{
     mesh::{RenderMesh, allocator::MeshAllocator},
     render_asset::RenderAssets,
     render_resource::{
-        BindGroupLayout, BindGroupLayoutEntries, ColorTargetState, ColorWrites, CompareFunction,
-        DepthStencilState, Face, FragmentState, RenderPipelineDescriptor, ShaderStages,
-        SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureFormat,
+        BindGroupLayoutDescriptor, BindGroupLayoutEntries, ColorTargetState, ColorWrites,
+        CompareFunction, DepthStencilState, Face, FragmentState, RenderPipelineDescriptor,
+        ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureFormat,
         binding_types::uniform_buffer,
     },
     renderer::RenderDevice,
@@ -33,14 +33,14 @@ use super::{ExtractedOutline, ExtractedOutlines, uniforms::OutlineUniform};
 #[derive(Resource)]
 pub struct MeshMaskPipeline {
     pub mesh_pipeline: MeshPipeline,
-    pub outline_bind_group_layout: BindGroupLayout,
+    pub outline_bind_group_layout: BindGroupLayoutDescriptor,
 }
 
 impl FromWorld for MeshMaskPipeline {
     fn from_world(world: &mut World) -> Self {
-        let render_device = world.get_resource::<RenderDevice>().unwrap();
+        let _render_device = world.get_resource::<RenderDevice>().unwrap();
 
-        let outline_instance_bind_group_layout = render_device.create_bind_group_layout(
+        let outline_instance_bind_group_layout = BindGroupLayoutDescriptor::new(
             "OutlineInstance",
             &BindGroupLayoutEntries::sequential(
                 ShaderStages::VERTEX_FRAGMENT,

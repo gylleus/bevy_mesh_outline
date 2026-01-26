@@ -8,7 +8,7 @@ use bevy::{
 };
 use bevy_render::{
     render_phase::{PhaseItem, RenderCommand, RenderCommandResult, TrackedRenderPass},
-    render_resource::{BindGroup, BindGroupEntry, BufferInitDescriptor},
+    render_resource::{BindGroup, BindGroupEntry, BufferInitDescriptor, PipelineCache},
     renderer::RenderDevice,
     sync_world::MainEntity,
 };
@@ -47,6 +47,7 @@ pub struct OutlineBindGroups(HashMap<MainEntity, BindGroup>);
 
 pub fn prepare_outline_bind_groups(
     render_device: Res<RenderDevice>,
+    pipeline_cache: Res<PipelineCache>,
     outline_pipeline: Res<MeshMaskPipeline>,
     extracted_outlines: Res<ExtractedOutlines>,
     mut outline_bind_groups: ResMut<OutlineBindGroups>,
@@ -66,7 +67,7 @@ pub fn prepare_outline_bind_groups(
         // Create bind group
         let bind_group = render_device.create_bind_group(
             Some("outline_bind_group"),
-            &outline_pipeline.outline_bind_group_layout,
+            &pipeline_cache.get_bind_group_layout(&outline_pipeline.outline_bind_group_layout),
             &[BindGroupEntry {
                 binding: 0,
                 resource: buffer.as_entire_binding(),

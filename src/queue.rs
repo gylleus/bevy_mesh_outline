@@ -1,6 +1,6 @@
 use bevy::{
     core_pipeline::prepass::NormalPrepass,
-    ecs::component::Tick,
+    ecs::change_detection::Tick,
     pbr::{MeshPipelineKey, RenderMeshInstances},
     prelude::*,
 };
