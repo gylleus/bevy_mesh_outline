@@ -14,11 +14,6 @@ const GLTF_PATH: &str = "Fox.glb";
 
 fn main() {
     App::new()
-        .insert_resource(AmbientLight {
-            color: Color::WHITE,
-            brightness: 2000.,
-            ..default()
-        })
         .add_plugins(DefaultPlugins)
         .add_plugins(MeshOutlinePlugin)
         .add_systems(Startup, setup_fox)
@@ -108,6 +103,11 @@ fn setup_camera_and_environment(
         OutlineCamera,
         DepthPrepass,
         Msaa::Off,
+        AmbientLight {
+            color: Color::WHITE,
+            brightness: 2000.,
+            ..default()
+        },
     ));
 
     // Plane
