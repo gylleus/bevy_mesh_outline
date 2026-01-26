@@ -179,7 +179,9 @@ impl ViewNode for MeshOutlineNode {
 
         let bind_group = render_context.render_device().create_bind_group(
             "compose_output_bind_group",
-            &world.resource::<PipelineCache>().get_bind_group_layout(&compose_pipeline.layout),
+            &world
+                .resource::<PipelineCache>()
+                .get_bind_group_layout(&compose_pipeline.layout),
             &BindGroupEntries::sequential((
                 // binding 0: screen_texture - The original scene color
                 post_process.source,

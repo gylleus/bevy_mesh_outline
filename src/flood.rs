@@ -5,8 +5,8 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::{
-            BindGroupEntries, BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedRenderPipelineId,
-            DynamicUniformBuffer, FragmentState, Operations, PipelineCache,
+            BindGroupEntries, BindGroupLayoutDescriptor, BindGroupLayoutEntries,
+            CachedRenderPipelineId, DynamicUniformBuffer, FragmentState, Operations, PipelineCache,
             RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline,
             RenderPipelineDescriptor, Sampler, SamplerDescriptor, ShaderType,
             binding_types::{sampler, texture_2d, uniform_buffer},
@@ -164,7 +164,9 @@ impl<'w> JumpFloodPass<'w> {
     ) {
         let bind_group = render_context.render_device().create_bind_group(
             "outline_jump_flood_bind_group",
-            &self.pipeline_cache.get_bind_group_layout(&self.pipeline.layout),
+            &self
+                .pipeline_cache
+                .get_bind_group_layout(&self.pipeline.layout),
             &BindGroupEntries::sequential((
                 &input.default_view,
                 &self.pipeline.sampler,

@@ -16,9 +16,9 @@ use bevy_render::{
     mesh::{RenderMesh, allocator::MeshAllocator},
     render_asset::RenderAssets,
     render_resource::{
-        BindGroupLayoutDescriptor, BindGroupLayoutEntries, ColorTargetState, ColorWrites, CompareFunction,
-        DepthStencilState, Face, FragmentState, RenderPipelineDescriptor, ShaderStages,
-        SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureFormat,
+        BindGroupLayoutDescriptor, BindGroupLayoutEntries, ColorTargetState, ColorWrites,
+        CompareFunction, DepthStencilState, Face, FragmentState, RenderPipelineDescriptor,
+        ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureFormat,
         binding_types::uniform_buffer,
     },
     renderer::RenderDevice,

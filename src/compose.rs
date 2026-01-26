@@ -3,8 +3,8 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::{
-            BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedRenderPipelineId, FragmentState,
-            PipelineCache, RenderPipelineDescriptor,
+            BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedRenderPipelineId,
+            FragmentState, PipelineCache, RenderPipelineDescriptor,
             binding_types::{sampler, texture_2d},
         },
         renderer::RenderDevice,
