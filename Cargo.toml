@@ -13,8 +13,8 @@ exclude = [".github/", "assets/"]
 readme = "README.md"
 
 [dependencies]
-bevy = { version = "0.18.0-rc.2", features = ["webgpu"] }
-bevy_render = "0.18.0-rc.2"
+bevy = { version = "0.18.0", features = ["webgpu"] }
+bevy_render = "0.18.0"
 rand = "0.9"
 tracing = "0.1"
 wgpu-types = "27"
