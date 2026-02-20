@@ -40,6 +40,7 @@ impl FromWorld for ComposeOutputPipeline {
                     texture_2d(TextureSampleType::Float { filterable: true }),
                     texture_depth_2d(),
                     texture_depth_2d(),
+                    texture_depth_2d(),
                 ),
             ),
         );

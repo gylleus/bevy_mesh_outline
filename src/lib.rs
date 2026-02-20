@@ -28,7 +28,7 @@ use bevy_render::{
         AddRenderCommand, BinnedRenderPhasePlugin, DrawFunctions, SetItemPipeline,
         ViewBinnedRenderPhases,
     },
-    render_resource::SpecializedMeshPipelines,
+    render_resource::{SpecializedMeshPipelines, TextureUsages},
     sync_world::{MainEntity, MainEntityHashMap},
 };
 use compose::ComposeOutputPipeline;
@@ -63,6 +63,10 @@ impl Plugin for MeshOutlinePlugin {
             ExtractComponentPlugin::<OutlineCamera>::default(),
         ));
         app.register_type::<MeshOutline>();
+
+        // Ensure the main pass depth texture has TEXTURE_BINDING so the compose
+        // shader can sample it for correct occlusion of transmissive/transparent geometry.
+        app.add_systems(PostUpdate, configure_outline_camera_depth_texture);
 
         app.add_plugins(
             BinnedRenderPhasePlugin::<MeshOutline3d, MeshMaskPipeline>::new(
@@ -199,6 +203,21 @@ fn extract_outlines_to_resource(
 
     for (main_entity, outline) in outlines.iter() {
         extracted_outlines.0.insert(*main_entity, outline.clone());
+    }
+}
+
+/// Ensures the main pass depth texture has `TEXTURE_BINDING` so the compose shader
+/// can sample it for correct occlusion of transmissive/transparent geometry.
+///
+/// Needs to run in the main app because `Camera3d::depth_texture_usages` controls
+/// how the GPU texture is allocated — by the time extraction runs, it's too late.
+///
+/// See `bevy_pbr::atmosphere::configure_camera_depth_usages` for the same pattern in Bevy.
+fn configure_outline_camera_depth_texture(mut cameras: Query<&mut Camera3d, With<OutlineCamera>>) {
+    for mut camera_3d in &mut cameras {
+        let mut usages = TextureUsages::from(camera_3d.depth_texture_usages);
+        usages |= TextureUsages::TEXTURE_BINDING;
+        camera_3d.depth_texture_usages = usages.into();
     }
 }
 

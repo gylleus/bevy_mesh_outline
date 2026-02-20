@@ -38,3 +38,7 @@ path = "examples/intersecting.rs"
 [[example]]
 name = "animated_mesh"
 path = "examples/animated_mesh.rs"
+
+[[example]]
+name = "transparent"
+path = "examples/transparent.rs"

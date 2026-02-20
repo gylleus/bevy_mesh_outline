@@ -8,7 +8,7 @@ use bevy_render::{
         RenderPassDepthStencilAttachment, RenderPassDescriptor, StoreOp, TextureViewDescriptor,
     },
     renderer::RenderContext,
-    view::{ExtractedView, ViewTarget},
+    view::{ExtractedView, ViewDepthTexture, ViewTarget},
 };
 
 use crate::MeshOutline3d;
@@ -29,6 +29,7 @@ impl ViewNode for MeshOutlineNode {
         &'static ViewTarget,
         &'static FloodTextures,
         &'static ViewPrepassTextures,
+        &'static ViewDepthTexture,
         &'static FloodSettings,
     );
 
@@ -43,6 +44,7 @@ impl ViewNode for MeshOutlineNode {
             view_target,
             flood_textures,
             prepass_textures,
+            view_depth_texture,
             flood_settings,
         ): QueryItem<'w, '_, Self::ViewQuery>,
         world: &'w World,
@@ -191,10 +193,12 @@ impl ViewNode for MeshOutlineNode {
                 &flood_textures.output.default_view,
                 // binding 3: appearance_texture - The appearance data texture
                 &flood_textures.appearance_texture.default_view,
-                // binding 4: depth_texture - Global depth texture
+                // binding 4: depth_texture - Prepass depth texture
                 &global_depth.texture.default_view,
                 // binding 5: outline_depth_texture - Use the outline depth texture
                 &outline_depth_view,
+                // binding 6: main_depth_texture - Main pass depth (includes transmissive geometry)
+                view_depth_texture.view(),
             )),
         );
 
