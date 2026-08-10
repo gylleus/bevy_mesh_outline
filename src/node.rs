@@ -18,8 +18,7 @@ use super::{
     texture::FloodTextures,
 };
 
-/// Renders the mesh outline effect. In Bevy 0.19 render passes are plain
-/// systems added to the `Core3d` schedule rather than render-graph nodes.
+/// Renders the mesh outline effect. Runs as a system in the `Core3d` schedule.
 pub fn mesh_outline_pass(
     world: &World,
     view: ViewQuery<(

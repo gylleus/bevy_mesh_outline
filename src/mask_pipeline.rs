@@ -37,9 +37,9 @@ pub struct MeshMaskPipeline {
 
 /// Initializes the [`MeshMaskPipeline`] resource.
 ///
-/// In Bevy 0.19 the base [`MeshPipeline`] is created by a `RenderStartup` system
-/// (the `MeshPipelineSystems` set) rather than via `FromWorld`, so we build our
-/// wrapper pipeline from that resource here instead of `init_resource`.
+/// [`MeshMaskPipeline`] wraps the base [`MeshPipeline`], so this runs in
+/// `RenderStartup` after `MeshPipelineSystems` and reads the finished
+/// [`MeshPipeline`] resource.
 pub fn init_mesh_mask_pipeline(mut commands: Commands, mesh_pipeline: Res<MeshPipeline>) {
     let outline_instance_bind_group_layout = BindGroupLayoutDescriptor::new(
         "OutlineInstance",

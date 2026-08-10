@@ -76,8 +76,8 @@ impl Plugin for MeshOutlinePlugin {
             .init_resource::<ViewBinnedRenderPhases<MeshOutline3d>>()
             .init_resource::<ExtractedOutlines>()
             .init_resource::<OutlineBindGroups>()
-            // Bevy 0.19 builds `MeshPipeline` in a `RenderStartup` system, so we
-            // build our mask pipeline (which wraps it) there too, after it.
+            // The mask pipeline wraps `MeshPipeline`, so build it in
+            // `RenderStartup` after `MeshPipeline` has been created.
             .add_systems(
                 RenderStartup,
                 init_mesh_mask_pipeline.after(MeshPipelineSystems),
@@ -101,10 +101,8 @@ impl Plugin for MeshOutlinePlugin {
                 ),
             )
             .add_render_command::<MeshOutline3d, DrawOutline>()
-            // Bevy 0.19 turned render-graph nodes into ordinary systems in the
-            // `Core3d` schedule. Run the outline pass at the end of the main
-            // pass (before post-processing such as bloom), matching the old
-            // `EndMainPass -> outline -> Bloom` graph edge.
+            // Run the outline pass at the end of the main pass, before
+            // post-processing such as bloom.
             .add_systems(
                 Core3d,
                 mesh_outline_pass
@@ -171,9 +169,8 @@ pub struct ExtractedOutline {
     pub world_from_local: [Vec4; 3],
 }
 
-// `ExtractComponent` is now a subtrait of `SyncComponent` (Bevy 0.19). The
-// `Target` is removed from the render world when the source `MeshOutline` is
-// removed, cleaning up the extracted component.
+// Ties the extracted `Target` to the source component's lifecycle: removing
+// `MeshOutline` removes its `ExtractedOutline` from the render world.
 impl SyncComponent for MeshOutline {
     type Target = ExtractedOutline;
 }

@@ -29,8 +29,6 @@ pub fn queue_outline(
     render_meshes: Res<RenderAssets<RenderMesh>>,
     render_mesh_instances: Res<RenderMeshInstances>,
     // Per-view base pipeline key (msaa, hdr/target format, prepass bits, ...).
-    // Replaces the manual key assembly used before Bevy 0.19, and in particular
-    // the removed `MeshPipelineKey::from_hdr` / `ExtractedView::hdr`.
     view_key_cache: Res<ViewKeyCache>,
     views: Query<(&ExtractedView, &RenderVisibleEntities), With<OutlineCamera>>,
 ) {
