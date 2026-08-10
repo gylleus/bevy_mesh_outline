@@ -19,6 +19,11 @@ pub(crate) fn update_views(
         }
 
         let retained_view_entity = RetainedViewEntity::new(main_entity.into(), None, 0);
+        // Bevy 0.19 retains binned-phase contents across frames (the "change
+        // lists" model). This plugin rebuilds its phase from scratch every frame
+        // in `queue_outline`, so drop any existing phase and recreate an empty
+        // one here to restore the previous per-frame clearing behaviour.
+        outline_phases.0.remove(&retained_view_entity);
         outline_phases.prepare_for_new_frame(
             retained_view_entity,
             GpuPreprocessingMode::PreprocessingOnly,

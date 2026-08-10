@@ -40,7 +40,7 @@ fn setup(
 
     commands.spawn((
         PointLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             intensity: 10_000_000.,
             range: 100.0,
             shadow_depth_bias: 0.2,
@@ -93,7 +93,7 @@ fn setup_ui(mut commands: Commands) {
     commands.spawn((
         Text::new("Decrease width (Q)\nIncrease width (W)\nCurrent width: 5.0"),
         TextFont {
-            font_size: 16.0,
+            font_size: FontSize::Px(16.0),
             ..default()
         },
         TextColor(Color::WHITE),

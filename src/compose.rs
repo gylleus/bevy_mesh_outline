@@ -45,7 +45,7 @@ impl FromWorld for ComposeOutputPipeline {
         );
 
         let target = Some(ColorTargetState {
-            format: TextureFormat::bevy_default(),
+            format: TextureFormat::Rgba8UnormSrgb,
             blend: None,
             write_mask: ColorWrites::ALL,
         });
@@ -72,7 +72,7 @@ impl FromWorld for ComposeOutputPipeline {
             primitive: PrimitiveState::default(),
             depth_stencil: None,
             multisample: MultisampleState::default(),
-            push_constant_ranges: vec![],
+            immediate_size: 0,
             zero_initialize_workgroup_memory: false,
         };
         let mut hdr_descriptor = descriptor.clone();
