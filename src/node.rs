@@ -1,13 +1,12 @@
-use bevy::{core_pipeline::prepass::ViewPrepassTextures, ecs::query::QueryItem, prelude::*};
+use bevy::{core_pipeline::prepass::ViewPrepassTextures, prelude::*};
 use bevy_render::{
     camera::ExtractedCamera,
-    render_graph::{NodeRunError, RenderGraphContext, ViewNode},
     render_phase::ViewBinnedRenderPhases,
     render_resource::{
         BindGroupEntries, LoadOp, Operations, PipelineCache, RenderPassColorAttachment,
         RenderPassDepthStencilAttachment, RenderPassDescriptor, StoreOp, TextureViewDescriptor,
     },
-    renderer::RenderContext,
+    renderer::{RenderContext, ViewQuery},
     view::{ExtractedView, ViewTarget},
 };
 
@@ -19,199 +18,189 @@ use super::{
     texture::FloodTextures,
 };
 
-#[derive(Default)]
-pub struct MeshOutlineNode;
-impl ViewNode for MeshOutlineNode {
-    type ViewQuery = (
-        Entity,
-        &'static ExtractedView,
-        &'static ExtractedCamera,
-        &'static ViewTarget,
-        &'static FloodTextures,
-        &'static ViewPrepassTextures,
-        &'static FloodSettings,
+/// Renders the mesh outline effect. Runs as a system in the `Core3d` schedule.
+pub fn mesh_outline_pass(
+    world: &World,
+    view: ViewQuery<(
+        &ExtractedView,
+        &ExtractedCamera,
+        &ViewTarget,
+        &FloodTextures,
+        &ViewPrepassTextures,
+        &FloodSettings,
+    )>,
+    mut ctx: RenderContext,
+) {
+    let view_entity = view.entity();
+    let (extracted_view, camera, view_target, flood_textures, prepass_textures, flood_settings) =
+        view.into_inner();
+
+    let render_context = &mut ctx;
+
+    let Some(outline_phases) = world.get_resource::<ViewBinnedRenderPhases<MeshOutline3d>>() else {
+        return;
+    };
+
+    let Some(outline_phase) = outline_phases.get(&extracted_view.retained_view_entity) else {
+        return;
+    };
+
+    let Some(mut jump_flood_pass) = JumpFloodPass::new(world) else {
+        return;
+    };
+    let mut flood_textures = flood_textures.clone();
+    let Some(global_depth) = prepass_textures.depth.as_ref() else {
+        tracing::warn!("No global depth texture found");
+        return;
+    };
+
+    // Note: Textures are cleared via LoadOp::Clear in the render passes below
+    // clear_texture is not supported in WebGPU backend
+
+    let flood_color_attachment = RenderPassColorAttachment {
+        view: &flood_textures.output.default_view,
+        resolve_target: None,
+        ops: Operations {
+            load: LoadOp::Clear(wgpu_types::Color {
+                r: -1.0,
+                g: -1.0,
+                b: -1.0,
+                a: 0.0,
+            }),
+            store: StoreOp::Store,
+        },
+        depth_slice: None,
+    };
+
+    let appearance_color_attachment = RenderPassColorAttachment {
+        view: &flood_textures.appearance_texture.default_view,
+        resolve_target: None,
+        ops: Operations {
+            load: LoadOp::Clear(wgpu_types::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            }),
+            store: StoreOp::Store,
+        },
+        depth_slice: None,
+    };
+
+    let outline_depth_view = flood_textures
+        .outline_depth_texture
+        .create_view(&TextureViewDescriptor::default());
+
+    {
+        let mut init_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
+            label: Some("outline_flood_init"),
+            color_attachments: &[
+                Some(flood_color_attachment),
+                Some(appearance_color_attachment),
+            ],
+            depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                view: &outline_depth_view,
+                depth_ops: Some(Operations {
+                    load: LoadOp::Clear(0.0),
+                    store: StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+
+        if let Some(viewport) = camera.viewport.as_ref() {
+            init_pass.set_camera_viewport(viewport);
+        }
+
+        if let Err(err) = outline_phase.render(&mut init_pass, world, view_entity) {
+            error!("Error encountered while rendering the outline flood init phase {err:?}");
+        }
+    }
+
+    let Some(compose_pipeline) = world.get_resource::<ComposeOutputPipeline>() else {
+        // Skip
+        return;
+    };
+
+    let pipeline_cache = world.resource::<PipelineCache>();
+
+    let pipeline_id = if camera.hdr {
+        compose_pipeline.hdr_pipeline_id
+    } else {
+        compose_pipeline.pipeline_id
+    };
+
+    // Get the pipeline from the cache
+    let Some(pipeline) = pipeline_cache.get_render_pipeline(pipeline_id) else {
+        // Skip
+        return;
+    };
+
+    let post_process = view_target.post_process_write();
+
+    // Flooding!
+
+    let outline_width: f32 = flood_settings.width;
+
+    let passes = if outline_width > 0.0 {
+        ((outline_width * 2.0).ceil() as u32 / 2 + 1)
+            .next_power_of_two()
+            .trailing_zeros()
+            + 1
+    } else {
+        0
+    };
+
+    for size in (0..passes).rev() {
+        flood_textures.flip();
+        jump_flood_pass.execute(
+            render_context,
+            flood_textures.input(),
+            flood_textures.output(),
+            &outline_depth_view,
+            &flood_textures.outline_flood_data.default_view,
+            &flood_textures.appearance_texture.default_view,
+            size,
+        );
+    }
+
+    let bind_group = render_context.render_device().create_bind_group(
+        "compose_output_bind_group",
+        &world
+            .resource::<PipelineCache>()
+            .get_bind_group_layout(&compose_pipeline.layout),
+        &BindGroupEntries::sequential((
+            // binding 0: screen_texture - The original scene color
+            post_process.source,
+            // binding 1: texture_sampler - Use the sampler created for the pipeline
+            &jump_flood_pass.pipeline.sampler,
+            // binding 2: flood_texture - The flood output texture
+            &flood_textures.output.default_view,
+            // binding 3: appearance_texture - The appearance data texture
+            &flood_textures.appearance_texture.default_view,
+            // binding 4: depth_texture - Global depth texture
+            &global_depth.texture.default_view,
+            // binding 5: outline_depth_texture - Use the outline depth texture
+            &outline_depth_view,
+        )),
     );
 
-    fn run<'w>(
-        &self,
-        _: &mut RenderGraphContext,
-        render_context: &mut RenderContext,
-        (
-            view_entity,
-            extracted_view,
-            camera,
-            view_target,
-            flood_textures,
-            prepass_textures,
-            flood_settings,
-        ): QueryItem<'w, '_, Self::ViewQuery>,
-        world: &'w World,
-    ) -> Result<(), NodeRunError> {
-        let Some(outline_phases) = world.get_resource::<ViewBinnedRenderPhases<MeshOutline3d>>()
-        else {
-            return Ok(());
-        };
+    // Composite pass
+    {
+        let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
+            label: Some("post_process_pass"),
+            color_attachments: &[Some(view_target.get_color_attachment())],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
 
-        let Some(outline_phase) = outline_phases.get(&extracted_view.retained_view_entity) else {
-            return Ok(());
-        };
-
-        let Some(mut jump_flood_pass) = JumpFloodPass::new(world) else {
-            return Ok(());
-        };
-        let mut flood_textures = flood_textures.clone();
-        let Some(global_depth) = prepass_textures.depth.as_ref() else {
-            tracing::warn!("No global depth texture found");
-            return Ok(());
-        };
-
-        // Note: Textures are cleared via LoadOp::Clear in the render passes below
-        // clear_texture is not supported in WebGPU backend
-
-        let flood_color_attachment = RenderPassColorAttachment {
-            view: &flood_textures.output.default_view,
-            resolve_target: None,
-            ops: Operations {
-                load: LoadOp::Clear(wgpu_types::Color {
-                    r: -1.0,
-                    g: -1.0,
-                    b: -1.0,
-                    a: 0.0,
-                }),
-                store: StoreOp::Store,
-            },
-            depth_slice: None,
-        };
-
-        let appearance_color_attachment = RenderPassColorAttachment {
-            view: &flood_textures.appearance_texture.default_view,
-            resolve_target: None,
-            ops: Operations {
-                load: LoadOp::Clear(wgpu_types::Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.0,
-                }),
-                store: StoreOp::Store,
-            },
-            depth_slice: None,
-        };
-
-        let outline_depth_view = flood_textures
-            .outline_depth_texture
-            .create_view(&TextureViewDescriptor::default());
-
-        {
-            let mut init_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
-                label: Some("outline_flood_init"),
-                color_attachments: &[
-                    Some(flood_color_attachment),
-                    Some(appearance_color_attachment),
-                ],
-                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
-                    view: &outline_depth_view,
-                    depth_ops: Some(Operations {
-                        load: LoadOp::Clear(0.0),
-                        store: StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-
-            if let Some(viewport) = camera.viewport.as_ref() {
-                init_pass.set_camera_viewport(viewport);
-            }
-
-            if let Err(err) = outline_phase.render(&mut init_pass, world, view_entity) {
-                error!("Error encountered while rendering the outline flood init phase {err:?}");
-            }
-        }
-
-        let Some(compose_pipeline) = world.get_resource::<ComposeOutputPipeline>() else {
-            // Skip
-            return Ok(());
-        };
-
-        let pipeline_cache = world.resource::<PipelineCache>();
-
-        let pipeline_id = if view_target.is_hdr() {
-            compose_pipeline.hdr_pipeline_id
-        } else {
-            compose_pipeline.pipeline_id
-        };
-
-        // Get the pipeline from the cache
-        let Some(pipeline) = pipeline_cache.get_render_pipeline(pipeline_id) else {
-            // Skip
-            return Ok(());
-        };
-
-        let post_process = view_target.post_process_write();
-
-        // Flooding!
-
-        let outline_width: f32 = flood_settings.width;
-
-        let passes = if outline_width > 0.0 {
-            ((outline_width * 2.0).ceil() as u32 / 2 + 1)
-                .next_power_of_two()
-                .trailing_zeros()
-                + 1
-        } else {
-            0
-        };
-
-        for size in (0..passes).rev() {
-            flood_textures.flip();
-            jump_flood_pass.execute(
-                render_context,
-                flood_textures.input(),
-                flood_textures.output(),
-                &outline_depth_view,
-                &flood_textures.outline_flood_data.default_view,
-                &flood_textures.appearance_texture.default_view,
-                size,
-            );
-        }
-
-        let bind_group = render_context.render_device().create_bind_group(
-            "compose_output_bind_group",
-            &world
-                .resource::<PipelineCache>()
-                .get_bind_group_layout(&compose_pipeline.layout),
-            &BindGroupEntries::sequential((
-                // binding 0: screen_texture - The original scene color
-                post_process.source,
-                // binding 1: texture_sampler - Use the sampler created for the pipeline
-                &jump_flood_pass.pipeline.sampler,
-                // binding 2: flood_texture - The flood output texture
-                &flood_textures.output.default_view,
-                // binding 3: appearance_texture - The appearance data texture
-                &flood_textures.appearance_texture.default_view,
-                // binding 4: depth_texture - Global depth texture
-                &global_depth.texture.default_view,
-                // binding 5: outline_depth_texture - Use the outline depth texture
-                &outline_depth_view,
-            )),
-        );
-
-        // Composite pass
-        {
-            let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
-                label: Some("post_process_pass"),
-                color_attachments: &[Some(view_target.get_color_attachment())],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-
-            render_pass.set_render_pipeline(pipeline);
-            render_pass.set_bind_group(0, &bind_group, &[]);
-            render_pass.draw(0..3, 0..1);
-        }
-        Ok(())
+        render_pass.set_render_pipeline(pipeline);
+        render_pass.set_bind_group(0, &bind_group, &[]);
+        render_pass.draw(0..3, 0..1);
     }
 }

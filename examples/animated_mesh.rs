@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 
 use bevy::{
     core_pipeline::prepass::DepthPrepass, light::CascadeShadowConfigBuilder, prelude::*,
-    scene::SceneInstanceReady,
+    world_serialization::WorldInstanceReady,
 };
 use bevy_mesh_outline::{MeshOutline, MeshOutlinePlugin, OutlineCamera};
 
@@ -43,7 +43,8 @@ fn setup_fox(
         index,
     };
 
-    let mesh_scene = SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(GLTF_PATH)));
+    let mesh_scene =
+        WorldAssetRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(GLTF_PATH)));
 
     commands
         .spawn((animation_to_play, mesh_scene))
@@ -54,7 +55,7 @@ fn setup_fox(
 
 // Called when the scene is ready and meshes exist
 fn initialize_outlines(
-    trigger: On<SceneInstanceReady>,
+    trigger: On<WorldInstanceReady>,
     mut commands: Commands,
     children: Query<&Children>,
     mesh_entities: Query<Entity, With<Mesh3d>>,
@@ -69,7 +70,7 @@ fn initialize_outlines(
 }
 
 fn initialize_animations(
-    trigger: On<SceneInstanceReady>,
+    trigger: On<WorldInstanceReady>,
     mut commands: Commands,
     children: Query<&Children>,
     animations_to_play: Query<&AnimationToPlay>,
@@ -120,7 +121,7 @@ fn setup_camera_and_environment(
     commands.spawn((
         Transform::from_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, 1.0, -PI / 4.)),
         DirectionalLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {

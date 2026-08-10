@@ -94,7 +94,7 @@ This approach provides:
 
 ## Technical Details
 
-The plugin integrates with Bevy's render graph and adds a custom render node after the main 3D pass. It requires depth prepass to be enabled for proper depth-aware outline rendering.
+The plugin integrates with Bevy's rendering schedules and adds a custom render pass system after the main 3D pass. It requires depth prepass to be enabled for proper depth-aware outline rendering.
 
 Outline data is packed into GPU textures using a flood-fill algorithm that efficiently calculates distance fields for smooth, consistent outline rendering across different mesh topologies.
 
@@ -103,6 +103,7 @@ Outline data is packed into GPU textures using a flood-fill algorithm that effic
 
 | Bevy |    bevy_mesh_outline |
 |--------------|--------------|
+| 0.19.X       | 0.4.0        |
 | 0.18.X       | 0.3.0        |
 | 0.17.X       | 0.2.0        |
 | 0.16.X       | 0.1.1        |

@@ -1,3 +1,4 @@
+use bevy::camera::Hdr;
 use bevy::{
     color::palettes::css::{BLUE, RED, SILVER},
     core_pipeline::prepass::DepthPrepass,
@@ -5,7 +6,6 @@ use bevy::{
     prelude::*,
 };
 use bevy_mesh_outline::{MeshOutline, MeshOutlinePlugin, OutlineCamera};
-use bevy_render::view::Hdr;
 
 fn main() {
     App::new()
@@ -44,7 +44,7 @@ fn setup(
 
     commands.spawn((
         PointLight {
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             intensity: 10_000_000.,
             range: 100.0,
             shadow_depth_bias: 0.2,

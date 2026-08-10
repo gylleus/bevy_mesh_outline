@@ -11,31 +11,31 @@ mod uniforms;
 mod view;
 
 use bevy::{
-    core_pipeline::core_3d::graph::{Core3d, Node3d},
-    math::Affine3,
+    core_pipeline::{Core3d, Core3dSystems, core_3d::main_transparent_pass_3d},
+    math::{Affine3, Affine3Ext},
     pbr::{
-        DrawMesh, SetMeshBindGroup, SetMeshViewBindGroup, SetMeshViewBindingArrayBindGroup,
-        extract_skins,
+        DrawMesh, MeshPipelineSystems, SetMeshBindGroup, SetMeshViewBindGroup,
+        SetMeshViewBindingArrayBindGroup, extract_skins,
     },
     prelude::*,
 };
 use bevy_render::{
-    Render, RenderApp, RenderDebugFlags, RenderSystems,
+    Render, RenderApp, RenderDebugFlags, RenderStartup, RenderSystems,
     batching::gpu_preprocessing::batch_and_prepare_binned_render_phase,
     extract_component::{ExtractComponent, ExtractComponentPlugin},
-    render_graph::{RenderGraphExt, RenderLabel, ViewNodeRunner},
     render_phase::{
         AddRenderCommand, BinnedRenderPhasePlugin, DrawFunctions, SetItemPipeline,
         ViewBinnedRenderPhases,
     },
     render_resource::SpecializedMeshPipelines,
+    sync_component::SyncComponent,
     sync_world::{MainEntity, MainEntityHashMap},
 };
 use compose::ComposeOutputPipeline;
 use flood::{JumpFloodPipeline, prepare_flood_settings};
 use mask::MeshOutline3d;
-use mask_pipeline::MeshMaskPipeline;
-use node::MeshOutlineNode;
+use mask_pipeline::{MeshMaskPipeline, init_mesh_mask_pipeline};
+use node::mesh_outline_pass;
 use queue::queue_outline;
 use render::{OutlineBindGroups, SetOutlineBindGroup, prepare_outline_bind_groups};
 use texture::prepare_flood_textures;
@@ -76,6 +76,12 @@ impl Plugin for MeshOutlinePlugin {
             .init_resource::<ViewBinnedRenderPhases<MeshOutline3d>>()
             .init_resource::<ExtractedOutlines>()
             .init_resource::<OutlineBindGroups>()
+            // The mask pipeline wraps `MeshPipeline`, so build it in
+            // `RenderStartup` after `MeshPipeline` has been created.
+            .add_systems(
+                RenderStartup,
+                init_mesh_mask_pipeline.after(MeshPipelineSystems),
+            )
             .add_systems(
                 ExtractSchedule,
                 (update_views, extract_outlines_to_resource).after(extract_skins),
@@ -95,17 +101,13 @@ impl Plugin for MeshOutlinePlugin {
                 ),
             )
             .add_render_command::<MeshOutline3d, DrawOutline>()
-            .add_render_graph_node::<ViewNodeRunner<MeshOutlineNode>>(
+            // Run the outline pass at the end of the main pass, before
+            // post-processing such as bloom.
+            .add_systems(
                 Core3d,
-                OutlineNode::MeshOutlineNode,
-            )
-            .add_render_graph_edges(
-                Core3d,
-                (
-                    Node3d::EndMainPass,
-                    OutlineNode::MeshOutlineNode,
-                    Node3d::Bloom,
-                ),
+                mesh_outline_pass
+                    .in_set(Core3dSystems::MainPass)
+                    .after(main_transparent_pass_3d),
             );
     }
 
@@ -114,7 +116,6 @@ impl Plugin for MeshOutlinePlugin {
             return;
         };
         render_app
-            .init_resource::<MeshMaskPipeline>()
             .init_resource::<JumpFloodPipeline>()
             .init_resource::<ComposeOutputPipeline>();
     }
@@ -168,6 +169,12 @@ pub struct ExtractedOutline {
     pub world_from_local: [Vec4; 3],
 }
 
+// Ties the extracted `Target` to the source component's lifecycle: removing
+// `MeshOutline` removes its `ExtractedOutline` from the render world.
+impl SyncComponent for MeshOutline {
+    type Target = ExtractedOutline;
+}
+
 impl ExtractComponent for MeshOutline {
     type QueryData = (Entity, &'static MeshOutline, &'static GlobalTransform);
 
@@ -183,7 +190,7 @@ impl ExtractComponent for MeshOutline {
             width: outline.width,
             priority: outline.priority,
             color: linear_color.to_vec4(),
-            world_from_local: Affine3::from(&transform.affine()).to_transpose(),
+            world_from_local: Affine3::from(transform.affine()).to_transpose(),
         })
     }
 }
@@ -200,9 +207,4 @@ fn extract_outlines_to_resource(
     for (main_entity, outline) in outlines.iter() {
         extracted_outlines.0.insert(*main_entity, outline.clone());
     }
-}
-
-#[derive(Copy, Clone, Debug, RenderLabel, Hash, PartialEq, Eq)]
-pub enum OutlineNode {
-    MeshOutlineNode,
 }
