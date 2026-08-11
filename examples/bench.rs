@@ -30,15 +30,13 @@ fn main() {
     let measure_frames = env_u32("BENCH_MEASURE", 240);
 
     App::new()
-        .add_plugins(
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    present_mode: PresentMode::AutoNoVsync,
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: PresentMode::AutoNoVsync,
                 ..default()
             }),
-        )
+            ..default()
+        }))
         .add_plugins(MeshOutlinePlugin)
         .insert_resource(BenchConfig {
             count,

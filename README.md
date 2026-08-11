@@ -113,9 +113,14 @@ Outline data is packed into GPU textures using a flood-fill algorithm that effic
 
 * Support MSAA (Multisample anti-aliasing)
 
-Meshes that share the same mesh asset *and* the same outline appearance
-(width, color, intensity, priority) are now batched into a single instanced /
-multi-drawn draw call, matching how Bevy batches the main 3D passes.
+## Performance
+
+Outlined meshes that share the same mesh asset *and* the same outline appearance
+(width, color, intensity, priority) are batched into a single instanced /
+multi-drawn draw call, matching how Bevy batches the main 3D passes. The
+per-instance outline uniforms are shared per appearance and cached across frames,
+so a scene with many outlined objects no longer allocates GPU resources per
+object per frame.
 
 ## License
 
