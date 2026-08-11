@@ -112,9 +112,10 @@ impl GetBatchData for MeshMaskPipeline {
         SRes<SkinUniforms>,
         SRes<ExtractedOutlines>,
     );
-    // Outlines are always drawn unbatched, so the exact split only needs to be
-    // consistent: the mesh asset id governs batching, and the extracted outline
-    // (which differs per instance) governs batch-set grouping.
+    // Actual draw-call batching is driven by the binned phase's bin key (mesh
+    // asset id + outline appearance, see `queue_outline`). These compare-data
+    // types are only consulted on the sorted / multi-draw paths, which this
+    // binned phase never takes; they just need to stay internally consistent.
     type BatchSetCompareData = ExtractedOutline;
     type BatchCompareData = AssetId<Mesh>;
 
