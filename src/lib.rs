@@ -21,7 +21,6 @@ use bevy::{
 };
 use bevy_render::{
     Render, RenderApp, RenderDebugFlags, RenderStartup, RenderSystems,
-    batching::gpu_preprocessing::batch_and_prepare_binned_render_phase,
     extract_component::{ExtractComponent, ExtractComponentPlugin},
     render_phase::{
         AddRenderCommand, BinnedRenderPhasePlugin, DrawFunctions, SetItemPipeline,
@@ -96,8 +95,10 @@ impl Plugin for MeshOutlinePlugin {
                         prepare_outline_bind_groups.after(prepare_flood_textures),
                     )
                         .in_set(RenderSystems::PrepareBindGroups),
-                    batch_and_prepare_binned_render_phase::<MeshOutline3d, MeshMaskPipeline>
-                        .in_set(RenderSystems::PrepareResources),
+                    // Note: batching (`batch_and_prepare_binned_render_phase`) and
+                    // the instance/indirect buffer writes are already registered
+                    // by `BinnedRenderPhasePlugin` above; adding them here too
+                    // would process the phase twice and corrupt its buffers.
                 ),
             )
             .add_render_command::<MeshOutline3d, DrawOutline>()
