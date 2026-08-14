@@ -3,6 +3,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_render::{
+    batching::gpu_preprocessing::GpuPreprocessingSupport,
     mesh::{RenderMesh, allocator::MeshAllocator},
     render_asset::RenderAssets,
     render_phase::{BinnedRenderPhaseType, DrawFunctions, ViewBinnedRenderPhases},
@@ -12,14 +13,14 @@ use bevy_render::{
 
 use crate::{
     DrawOutline,
-    mask::{OutlineBatchSetKey, OutlineBinKey},
+    mask::{OutlineBatchSetKey, OutlineBinKey, OutlineKey},
 };
 
 use super::{ExtractedOutline, MeshOutline3d, OutlineCamera, mask_pipeline::MeshMaskPipeline};
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn queue_outline(
-    outlined_meshes: Query<(), With<ExtractedOutline>>,
+    outlined_meshes: Query<&ExtractedOutline>,
     draw_functions: Res<DrawFunctions<MeshOutline3d>>,
     mut outline_phases: ResMut<ViewBinnedRenderPhases<MeshOutline3d>>,
     mesh_outline_pipeline: Res<MeshMaskPipeline>,
@@ -30,6 +31,9 @@ pub fn queue_outline(
     render_mesh_instances: Res<RenderMeshInstances>,
     // Per-view base pipeline key (msaa, hdr/target format, prepass bits, ...).
     view_key_cache: Res<ViewKeyCache>,
+    // Governs the batch tier (multi-drawable / batchable / unbatchable) so the
+    // outline phase matches how the main 3D phases process the same meshes.
+    gpu_preprocessing_support: Res<GpuPreprocessingSupport>,
     views: Query<(&ExtractedView, &RenderVisibleEntities), With<OutlineCamera>>,
 ) {
     let draw_function = draw_functions.read().id::<DrawOutline>();
@@ -52,9 +56,9 @@ pub fn queue_outline(
         };
 
         for (&render_entity, &main_entity) in visible_meshes.iter_visible() {
-            if outlined_meshes.get(render_entity).is_err() {
+            let Ok(outline) = outlined_meshes.get(render_entity) else {
                 continue;
-            }
+            };
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(main_entity)
             else {
                 tracing::warn!(target: "bevy_mesh_outline", "No mesh instance found for entity {:?}", main_entity);
@@ -97,13 +101,20 @@ pub fn queue_outline(
                     pipeline: pipeline_id,
                     draw_function,
                     slabs: mesh_slabs,
+                    outline: OutlineKey::from_outline(outline),
                 },
                 OutlineBinKey {
                     asset_id: mesh_instance.mesh_asset_id().untyped(),
                 },
                 (render_entity, main_entity),
                 mesh_instance.current_uniform_index,
-                BinnedRenderPhaseType::UnbatchableMesh,
+                // Mirror the main 3D phases: instances of the same mesh with the
+                // same outline appearance batch (or multi-draw) into one draw,
+                // all sharing the representative entity's outline bind group.
+                BinnedRenderPhaseType::mesh(
+                    mesh_instance.should_batch(),
+                    &gpu_preprocessing_support,
+                ),
             );
         }
     }
