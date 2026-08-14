@@ -6,7 +6,14 @@
 @group(0) @binding(1) var texture_sampler: sampler;
 @group(0) @binding(2) var flood_texture: texture_2d<f32>;
 @group(0) @binding(3) var appearance_texture: texture_2d<f32>;
+// Global scene depth from the prepass. When the camera has MSAA enabled this
+// texture is multisampled and must be read with textureLoad.
+#ifdef MULTISAMPLED
+@group(0) @binding(4) var depth_texture: texture_depth_multisampled_2d;
+#else
 @group(0) @binding(4) var depth_texture: texture_depth_2d;
+#endif
+// Outline depth is owned by the plugin and is always single-sampled.
 @group(0) @binding(5) var outline_depth_texture: texture_depth_2d;
 
 struct VertexOutput {
@@ -26,7 +33,12 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     // Get depths
+#ifdef MULTISAMPLED
+    // Multisampled depth textures can't be sampled; read sample 0 by pixel.
+    let current_depth = textureLoad(depth_texture, vec2<i32>(in.clip_position.xy), 0);
+#else
     let current_depth = textureSample(depth_texture, texture_sampler, in.uv);
+#endif
     let outline_depth = textureSample(outline_depth_texture, texture_sampler, seed_uv);
 
     // Get appearance data for this outline

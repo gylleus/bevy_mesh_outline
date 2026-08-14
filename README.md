@@ -16,6 +16,7 @@ This plugin provides outline rendering for 3D meshes using a multi-pass GPU appr
 - **Customizable outlines** - Control width, color, intensity, and priority per mesh
 - **Depth-aware rendering** - Outlines respect depth relationships and handle intersecting geometry
 - **HDR support** - Works with both standard and HDR rendering pipelines
+- **MSAA support** - Works with multisample anti-aliasing
 - **Animation-friendly** - Supports animated meshes, skinning, and morph targets
 
 
@@ -46,16 +47,11 @@ MeshOutline::new(10.0)
 
 Mark cameras that should render outlines:
 
-
-> [!NOTE]  
-> The rendering pipeline currently does not support MSAA and will only work on cameras where it is disabled.
-
 ```rust
 commands.spawn((
     Camera3d::default(),
     OutlineCamera, // Enable outline rendering for this camera
     DepthPrepass,  // Required for proper depth testing
-    Msaa::Off, // Disable MSAA
 ));
 ```
 
@@ -108,10 +104,6 @@ Outline data is packed into GPU textures using a flood-fill algorithm that effic
 | 0.17.X       | 0.2.0        |
 | 0.16.X       | 0.1.1        |
 
-
-## Future work
-
-* Support MSAA (Multisample anti-aliasing)
 
 ## Performance
 
