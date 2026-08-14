@@ -35,7 +35,6 @@ fn setup(
         // Mark camera for outline rendering
         OutlineCamera,
         DepthPrepass,
-        Msaa::Off,
     ));
 
     commands.spawn((

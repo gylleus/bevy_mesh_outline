@@ -17,9 +17,9 @@ use bevy_render::{
     render_asset::RenderAssets,
     render_resource::{
         BindGroupLayoutDescriptor, BindGroupLayoutEntries, ColorTargetState, ColorWrites,
-        CompareFunction, DepthStencilState, Face, FragmentState, RenderPipelineDescriptor,
-        ShaderStages, SpecializedMeshPipeline, SpecializedMeshPipelineError, TextureFormat,
-        binding_types::uniform_buffer,
+        CompareFunction, DepthStencilState, Face, FragmentState, MultisampleState,
+        RenderPipelineDescriptor, ShaderStages, SpecializedMeshPipeline,
+        SpecializedMeshPipelineError, TextureFormat, binding_types::uniform_buffer,
     },
     sync_world::MainEntity,
 };
@@ -94,6 +94,15 @@ impl SpecializedMeshPipeline for MeshMaskPipeline {
             stencil: default(),
             bias: default(),
         });
+
+        // The mask pass always renders to single-sampled targets (the jump-flood
+        // seed data cannot be meaningfully multisample-resolved). We keep the
+        // camera's MSAA in `key` so the view bind group layout matches, but force
+        // the pipeline itself to a single sample. Reading the (multisampled)
+        // prepass depth texture from the mesh view bind group is unaffected by
+        // the pipeline's own sample count.
+        descriptor.multisample = MultisampleState::default();
+
         descriptor.label = Some("outline_pipeline".into());
         descriptor
             .layout

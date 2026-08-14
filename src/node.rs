@@ -28,12 +28,20 @@ pub fn mesh_outline_pass(
         &FloodTextures,
         &ViewPrepassTextures,
         &FloodSettings,
+        &Msaa,
     )>,
     mut ctx: RenderContext,
 ) {
     let view_entity = view.entity();
-    let (extracted_view, camera, view_target, flood_textures, prepass_textures, flood_settings) =
-        view.into_inner();
+    let (
+        extracted_view,
+        camera,
+        view_target,
+        flood_textures,
+        prepass_textures,
+        flood_settings,
+        msaa,
+    ) = view.into_inner();
 
     let render_context = &mut ctx;
 
@@ -127,10 +135,20 @@ pub fn mesh_outline_pass(
 
     let pipeline_cache = world.resource::<PipelineCache>();
 
-    let pipeline_id = if camera.hdr {
-        compose_pipeline.hdr_pipeline_id
+    // Under MSAA the global depth prepass texture is multisampled, so both the
+    // pipeline (which declares the depth binding) and the bind group layout must
+    // match. The outline compose pass itself always writes single-sampled.
+    let multisampled = msaa.samples() > 1;
+    let pipeline_id = match (camera.hdr, multisampled) {
+        (false, false) => compose_pipeline.pipeline_id,
+        (true, false) => compose_pipeline.hdr_pipeline_id,
+        (false, true) => compose_pipeline.pipeline_id_multisampled,
+        (true, true) => compose_pipeline.hdr_pipeline_id_multisampled,
+    };
+    let compose_layout = if multisampled {
+        &compose_pipeline.layout_multisampled
     } else {
-        compose_pipeline.pipeline_id
+        &compose_pipeline.layout
     };
 
     // Get the pipeline from the cache
@@ -171,7 +189,7 @@ pub fn mesh_outline_pass(
         "compose_output_bind_group",
         &world
             .resource::<PipelineCache>()
-            .get_bind_group_layout(&compose_pipeline.layout),
+            .get_bind_group_layout(compose_layout),
         &BindGroupEntries::sequential((
             // binding 0: screen_texture - The original scene color
             post_process.source,
@@ -192,7 +210,10 @@ pub fn mesh_outline_pass(
     {
         let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
             label: Some("post_process_pass"),
-            color_attachments: &[Some(view_target.get_color_attachment())],
+            // Always write to the unsampled main texture. The scene has already
+            // been resolved to it by the time the outline pass runs, and this
+            // keeps the compose pass single-sampled regardless of camera MSAA.
+            color_attachments: &[Some(view_target.get_unsampled_color_attachment())],
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,

@@ -71,6 +71,11 @@ pub fn queue_outline(
                 continue;
             };
 
+            // Keep the camera's real MSAA bits in the key so the mask pipeline's
+            // mesh view bind group layout (group 0) matches the view's actual
+            // `mesh_view_bind_group`, which is keyed on the camera MSAA. The mask
+            // pass itself is forced to render single-sampled in
+            // `MeshMaskPipeline::specialize`.
             let mut mesh_key = view_key;
             mesh_key |= MeshPipelineKey::from_primitive_topology_and_strip_index(
                 mesh.primitive_topology(),
