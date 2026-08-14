@@ -1160,7 +1160,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_mesh_outline"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "bevy",
  "bevy_render",
