@@ -20,7 +20,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_render::{
-    Render, RenderApp, RenderDebugFlags, RenderStartup, RenderSystems,
+    Extract, Render, RenderApp, RenderDebugFlags, RenderStartup, RenderSystems,
     extract_component::{ExtractComponent, ExtractComponentPlugin},
     render_phase::{
         AddRenderCommand, BinnedRenderPhasePlugin, DrawFunctions, SetItemPipeline,
@@ -199,13 +199,30 @@ impl ExtractComponent for MeshOutline {
 #[derive(Resource, Clone, Default)]
 pub struct ExtractedOutlines(MainEntityHashMap<ExtractedOutline>);
 
+/// Mirrors the outlines into a `MainEntity`-keyed resource for random access.
+///
+/// Reads the main world, not the render world's `ExtractedOutline`s: those are
+/// inserted by `ExtractComponentPlugin`'s commands at a later sync point, which
+/// would leave this a frame behind — and bind groups built from stale
+/// appearances make `queue_outline`'s live keys miss.
 fn extract_outlines_to_resource(
     mut extracted_outlines: ResMut<ExtractedOutlines>,
-    outlines: Query<(&MainEntity, &ExtractedOutline)>,
+    outlines: Extract<
+        Query<
+            <MeshOutline as ExtractComponent>::QueryData,
+            <MeshOutline as ExtractComponent>::QueryFilter,
+        >,
+    >,
 ) {
     extracted_outlines.0.clear();
 
-    for (main_entity, outline) in outlines.iter() {
-        extracted_outlines.0.insert(*main_entity, outline.clone());
+    for item in outlines.iter() {
+        let entity = item.0;
+        let Some(outline) = MeshOutline::extract_component(item) else {
+            continue;
+        };
+        extracted_outlines
+            .0
+            .insert(MainEntity::from(entity), outline);
     }
 }

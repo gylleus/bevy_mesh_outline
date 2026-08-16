@@ -100,3 +100,124 @@ pub fn prepare_outline_bind_groups(
         .0
         .retain(|key, _| live_keys.contains(key));
 }
+
+#[cfg(test)]
+mod tests {
+    use bevy::{
+        camera::RenderTarget,
+        core_pipeline::prepass::DepthPrepass,
+        prelude::*,
+        render::{
+            RenderPlugin, pipelined_rendering::PipelinedRenderingPlugin,
+            render_resource::TextureFormat,
+        },
+        window::{ExitCondition, WindowPlugin},
+        winit::WinitPlugin,
+    };
+    use bevy_render::RenderApp;
+
+    use crate::{ExtractedOutline, MeshOutline, MeshOutlinePlugin, OutlineCamera};
+
+    use super::{OutlineBindGroups, OutlineKey};
+
+    /// An outline whose appearance changes every frame must still have a bind
+    /// group for that frame's appearance, or `SetOutlineBindGroup` skips it.
+    #[test]
+    #[ignore = "requires a GPU adapter; run with: cargo test -- --ignored"]
+    fn animated_outline_keeps_its_bind_group() {
+        let mut app = App::new();
+
+        app.add_plugins(
+            DefaultPlugins
+                .build()
+                // Its event loop panics off the main thread; frames are driven
+                // manually below.
+                .disable::<WinitPlugin>()
+                // Keeps the render app in this `App`, so it can be inspected.
+                .disable::<PipelinedRenderingPlugin>()
+                .set(WindowPlugin {
+                    primary_window: None,
+                    exit_condition: ExitCondition::DontExit,
+                    ..default()
+                })
+                .set(RenderPlugin {
+                    synchronous_pipeline_compilation: true,
+                    ..default()
+                }),
+        )
+        .add_plugins(MeshOutlinePlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, animate_outline);
+
+        app.finish();
+        app.cleanup();
+
+        for frame in 0..8 {
+            app.update();
+
+            // Let the renderer settle first.
+            if frame < 2 {
+                continue;
+            }
+
+            let render_world = app.sub_app_mut(RenderApp).world_mut();
+            let outlines: Vec<ExtractedOutline> = render_world
+                .query::<&ExtractedOutline>()
+                .iter(render_world)
+                .cloned()
+                .collect();
+            let bind_groups = render_world.resource::<OutlineBindGroups>();
+
+            let mut checked = 0;
+            for outline in &outlines {
+                assert!(
+                    bind_groups
+                        .0
+                        .contains_key(&OutlineKey::from_outline(outline)),
+                    "frame {frame}: no bind group for the outline being drawn \
+                     (width {}), so its draw is skipped",
+                    outline.width,
+                );
+                checked += 1;
+            }
+            assert_eq!(checked, 1, "frame {frame}: expected one extracted outline");
+        }
+    }
+
+    fn setup(
+        mut commands: Commands,
+        mut meshes: ResMut<Assets<Mesh>>,
+        mut materials: ResMut<Assets<StandardMaterial>>,
+        mut images: ResMut<Assets<Image>>,
+    ) {
+        let target = images.add(Image::new_target_texture(
+            64,
+            64,
+            TextureFormat::Rgba8UnormSrgb,
+            None,
+        ));
+
+        commands.spawn((
+            Camera3d::default(),
+            RenderTarget::Image(target.into()),
+            Transform::from_xyz(3.0, 2.0, 3.0).looking_at(Vec3::new(0.0, 1.0, 0.0), Vec3::Y),
+            OutlineCamera,
+            DepthPrepass,
+        ));
+
+        commands.spawn((PointLight::default(), Transform::from_xyz(8.0, 16.0, 8.0)));
+
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::default())),
+            MeshMaterial3d(materials.add(Color::WHITE)),
+            Transform::from_xyz(0.0, 1.0, 0.0),
+            MeshOutline::new(10.0),
+        ));
+    }
+
+    fn animate_outline(mut outlines: Query<&mut MeshOutline>) {
+        for mut outline in outlines.iter_mut() {
+            outline.width -= 0.25;
+        }
+    }
+}
